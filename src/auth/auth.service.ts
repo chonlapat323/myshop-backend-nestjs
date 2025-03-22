@@ -21,6 +21,11 @@ export class AuthService {
 
   async login(user: any) {
     const payload = { email: user.email, sub: user.id, role: user.role_id };
-    return this.jwtService.sign(payload);
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: '1m', // อายุ token
+    });
+
+    return { accessToken }; // ✅ return object
   }
 }
