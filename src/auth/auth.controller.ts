@@ -17,7 +17,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // ✅ ใช้ https ใน production
       sameSite: 'lax',
-      maxAge: 1000 * 60 * 5,
+      maxAge: 1000 * 60 * 1,
     });
     return { message: 'Login success' };
   }
