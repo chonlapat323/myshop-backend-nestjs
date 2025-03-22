@@ -24,8 +24,12 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token');
-    return { message: 'Logged out' };
+    res.clearCookie('token', {
+      httpOnly: true,
+      sameSite: 'lax', // ให้ตรงกับที่ใช้ตอน login
+      secure: false, // ถ้า production ต้องเป็น true + https
+    });
+    return { message: 'Logged out successfully' };
   }
 
   @Post('profile')
