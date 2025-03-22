@@ -26,6 +26,10 @@ export class AuthService {
       expiresIn: '1m', // อายุ token
     });
 
-    return { accessToken }; // ✅ return object
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: '7d',
+    });
+
+    return { accessToken, refreshToken }; // ✅ return object
   }
 }
