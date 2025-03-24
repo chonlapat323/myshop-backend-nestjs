@@ -30,15 +30,19 @@ export class AuthController {
     const token = await this.authService.login(user);
     res.cookie('token', token.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // ✅ ใช้ https ใน production
+      //secure: process.env.NODE_ENV === 'production', // ✅ ใช้ https ใน production
       sameSite: 'lax',
       maxAge: 1000 * 60 * 1,
+      path: '/',
+      secure: false, // ถ้า production ต้องเป็น true + https
     });
+
     res.cookie('refresh_token', token.refreshToken, {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 วัน
       path: '/auth/refresh',
+      secure: false, // ถ้า production ต้องเป็น true + https
     });
     return { message: 'Login success' };
   }
@@ -49,7 +53,9 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken = req.cookies['refresh_token'];
-
+    console.log('🔁 Refresh token: ', refreshToken);
+    console.log('🧠 Payload from token: ', req.cookies['token']);
+    console.log('✅ New access token issued');
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
 
     try {
@@ -64,6 +70,7 @@ export class AuthController {
           role: payload.role,
         },
         {
+          secret: this.configService.get('JWT_SECRET'),
           expiresIn: '1m',
         },
       );
@@ -73,6 +80,7 @@ export class AuthController {
         httpOnly: true,
         sameSite: 'lax',
         maxAge: 1000 * 60 * 1,
+        secure: false, // ถ้า production ต้องเป็น true + https
       });
 
       return { message: 'Access token refreshed' };
@@ -85,9 +93,17 @@ export class AuthController {
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('token', {
       httpOnly: true,
-      sameSite: 'lax', // ให้ตรงกับที่ใช้ตอน login
-      secure: false, // ถ้า production ต้องเป็น true + https
+      sameSite: 'lax',
+      secure: false, // ✅ อย่าลืมปรับ true เมื่อเป็น production
     });
+
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/auth/refresh', // ต้องระบุ path ให้ตรงกับที่ตั้งไว้
+    });
+
     return { message: 'Logged out successfully' };
   }
 
