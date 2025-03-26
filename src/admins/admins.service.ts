@@ -1,5 +1,5 @@
 // src/admins/admins.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Admin } from './admins.entity';
 import { Repository } from 'typeorm';
@@ -27,5 +27,13 @@ export class AdminsService {
 
   async findAll() {
     return this.adminRepo.find();
+  }
+
+  async remove(id: number) {
+    const result = await this.adminRepo.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Admin with ID ${id} not found`);
+    }
+    return { message: 'Admin deleted successfully' };
   }
 }
