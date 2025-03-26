@@ -10,6 +10,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AdminsService } from './admins.service';
 import { CreateAdminDto } from './admins.dto';
+import { Delete, Param, NotFoundException } from '@nestjs/common'; // ⬅️ เพิ่มตรง import ด้านบน
 
 @Controller('admins')
 export class AdminsController {
@@ -41,5 +42,14 @@ export class AdminsController {
       message: '✅ Admin created successfully',
       admin: newAdmin,
     };
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    const adminId = parseInt(id);
+    if (isNaN(adminId)) {
+      throw new NotFoundException('Invalid ID');
+    }
+    return this.adminsService.remove(adminId);
   }
 }
