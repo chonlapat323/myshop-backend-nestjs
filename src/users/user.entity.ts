@@ -29,10 +29,10 @@ export class User {
   @Column({ type: 'text', nullable: true })
   note: string;
 
-  @Column({ length: 255 })
+  @Column({ nullable: true })
   email: string;
 
-  @Column({ length: 255 })
+  @Column({ nullable: true })
   hashed_password: string;
 
   @Column()

@@ -6,16 +6,18 @@ import { User } from './users/user.entity'; // Import Entity ของตาร�
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
+import { AdminsModule } from './admins/admins.module';
+import { Admin } from './admins/admins.entity';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'host.docker.internal', // หรือชื่อ container ของ PostgreSQL
+      host: 'localhost', // หรือชื่อ container ของ PostgreSQL
       port: 5432,
       username: 'root', // เปลี่ยนเป็น username ของคุณ
       password: 'admin', // เปลี่ยนเป็น password ของคุณ
       database: 'ecommerce-db', // เปลี่ยนเป็นชื่อ database ของคุณ
-      entities: [User], // โหลด entity ที่เกี่ยวข้อง
+      entities: [User, Admin], // โหลด entity ที่เกี่ยวข้อง
       synchronize: true, // ปิดการ sync เพราะตารางมีอยู่แล้ว
     }),
     ConfigModule.forRoot({
@@ -24,6 +26,7 @@ import { ConfigModule } from '@nestjs/config';
     }),
     UsersModule,
     AuthModule,
+    AdminsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
