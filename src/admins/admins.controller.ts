@@ -11,6 +11,8 @@ import { extname } from 'path';
 import { AdminsService } from './admins.service';
 import { CreateAdminDto } from './admins.dto';
 import { Delete, Param, NotFoundException } from '@nestjs/common'; // ⬅️ เพิ่มตรง import ด้านบน
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Controller('admins')
 export class AdminsController {
@@ -31,17 +33,29 @@ export class AdminsController {
     }),
   )
   async createAdmin(
-    @UploadedFile() avatar: Express.Multer.File | undefined, // ✅ เผื่อกรณีไม่มี avatar
+    @UploadedFile() avatar: Express.Multer.File | undefined,
     @Body() body: CreateAdminDto,
   ) {
     const avatarUrl = avatar ? `/uploads/${avatar.filename}` : undefined;
 
-    const newAdmin = await this.adminsService.create(body, avatarUrl);
+    try {
+      const newAdmin = await this.adminsService.create(body, avatarUrl);
+      return {
+        message: '✅ Admin created successfully',
+        admin: newAdmin,
+      };
+    } catch (error) {
+      // ❌ ถ้า save admin ไม่สำเร็จ → ลบไฟล์ออก
+      if (avatar?.path) {
+        const fullPath = path.resolve(avatar.path);
+        fs.unlink(fullPath, (err) => {
+          if (err) console.error('❌ Failed to remove uploaded file:', err);
+        });
+      }
 
-    return {
-      message: '✅ Admin created successfully',
-      admin: newAdmin,
-    };
+      // ✅ ส่ง error กลับ
+      throw error;
+    }
   }
 
   @Delete(':id')

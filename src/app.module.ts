@@ -7,7 +7,6 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { AdminsModule } from './admins/admins.module';
-import { Admin } from './admins/admins.entity';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -17,7 +16,7 @@ import { Admin } from './admins/admins.entity';
       username: 'root', // เปลี่ยนเป็น username ของคุณ
       password: 'admin', // เปลี่ยนเป็น password ของคุณ
       database: 'ecommerce-db', // เปลี่ยนเป็นชื่อ database ของคุณ
-      entities: [User, Admin], // โหลด entity ที่เกี่ยวข้อง
+      entities: [User], // โหลด entity ที่เกี่ยวข้อง
       synchronize: true, // ปิดการ sync เพราะตารางมีอยู่แล้ว
     }),
     ConfigModule.forRoot({
