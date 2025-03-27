@@ -4,6 +4,8 @@ import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
 import { join } from 'path';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
@@ -14,6 +16,7 @@ async function bootstrap() {
       transform: true, // แปลง type ให้ตรงกับ DTO เช่น string -> number
     }),
   );
+  app.useGlobalFilters(new HttpExceptionFilter());
   app.use('/uploads', express.static(join(__dirname, '..', 'public/uploads')));
   app.enableCors({
     origin: 'http://localhost:3000', // อนุญาตเฉพาะ Next.js ที่รันบนพอร์ต 3001
