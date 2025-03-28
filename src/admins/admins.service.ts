@@ -15,6 +15,10 @@ export class AdminsService {
     private readonly adminRepo: Repository<User>,
   ) {}
 
+  async findById(id: string): Promise<User | null> {
+    return this.adminRepo.findOneBy({ id });
+  }
+
   async create(dto: CreateAdminDto, avatarUrl?: string) {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     const newAdmin = this.adminRepo.create({
@@ -30,7 +34,7 @@ export class AdminsService {
     return this.adminRepo.find();
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     const admin = await this.adminRepo.findOne({ where: { id } });
 
     if (!admin) {

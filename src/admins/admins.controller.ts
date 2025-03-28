@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -13,10 +14,22 @@ import { CreateAdminDto } from './admins.dto';
 import { Delete, Param, NotFoundException } from '@nestjs/common'; // ⬅️ เพิ่มตรง import ด้านบน
 import * as fs from 'fs';
 import * as path from 'path';
+import { User } from 'src/users/user.entity';
 
 @Controller('admins')
 export class AdminsController {
   constructor(private readonly adminsService: AdminsService) {}
+
+  @Get(':id')
+  async findOne(@Param('id') id: string): Promise<User> {
+    const admin = await this.adminsService.findById(id);
+
+    if (!admin) {
+      throw new NotFoundException(`Admin with ID ${id} not found`);
+    }
+
+    return admin;
+  }
 
   @Post()
   @UseInterceptors(
@@ -60,10 +73,9 @@ export class AdminsController {
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    const adminId = parseInt(id);
-    if (isNaN(adminId)) {
+    if (!id) {
       throw new NotFoundException('Invalid ID');
     }
-    return this.adminsService.remove(adminId);
+    return this.adminsService.remove(id);
   }
 }
