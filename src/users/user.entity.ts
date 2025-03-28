@@ -9,7 +9,7 @@ import {
 @Entity('users') // ชื่อตารางใน DB
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: number;
+  id: string;
 
   @Column({ nullable: true })
   first_name: string;
