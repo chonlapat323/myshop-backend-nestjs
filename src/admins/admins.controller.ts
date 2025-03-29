@@ -1,20 +1,29 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  ParseUUIDPipe,
   Post,
+  Put,
+  Req,
   UploadedFile,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AdminsService } from './admins.service';
-import { CreateAdminDto } from './admins.dto';
+import { CreateAdminDto, UpdateAdminDto } from './admins.dto';
 import { Delete, Param, NotFoundException } from '@nestjs/common'; // ⬅️ เพิ่มตรง import ด้านบน
 import * as fs from 'fs';
 import * as path from 'path';
 import { User } from 'src/users/user.entity';
+import { editFileName, imageFileFilter } from '../common/utils/file-upload';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { Request } from 'express';
 
 @Controller('admins')
 export class AdminsController {
@@ -47,20 +56,81 @@ export class AdminsController {
   )
   async createAdmin(
     @UploadedFile() avatar: Express.Multer.File | undefined,
-    @Body() body: CreateAdminDto,
+    @Req() req: Request, // 👈 รับ request ทั้งก้อนแทน @Body()
   ) {
+    const rawBody = req.body;
     const avatarUrl = avatar ? `/uploads/${avatar.filename}` : undefined;
 
+    // ✅ ป้องกัน hashed_password ไม่เป็น string
+    if (typeof rawBody.hashed_password !== 'string') {
+      rawBody.hashed_password = String(rawBody.hashed_password ?? '');
+    }
+
+    // ✅ แปลงจาก plain object → DTO
+    const dto = plainToInstance(CreateAdminDto, rawBody);
+    // ✅ ตรวจสอบ DTO
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      // ❌ ลบรูปถ้า validate ไม่ผ่าน
+      if (avatar?.path) {
+        const fullPath = path.resolve(avatar.path);
+        fs.unlink(fullPath, (err) => {
+          if (err) console.error('❌ Failed to remove uploaded file:', err);
+        });
+      }
+      throw new BadRequestException(errors);
+    }
+
     try {
-      const newAdmin = await this.adminsService.create(body, avatarUrl);
+      const newAdmin = await this.adminsService.create(dto, avatarUrl);
       return {
         message: '✅ Admin created successfully',
         admin: newAdmin,
       };
     } catch (error) {
-      // ❌ ถ้า save admin ไม่สำเร็จ → ลบไฟล์ออก
       if (avatar?.path) {
         const fullPath = path.resolve(avatar.path);
+        fs.unlink(fullPath, (err) => {
+          if (err) console.error('❌ Failed to remove uploaded file:', err);
+        });
+      }
+      throw error;
+    }
+  }
+
+  @UseInterceptors(
+    FileInterceptor('avatar', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: editFileName, // ✅ ใช้ฟังก์ชัน rename ของคุณ
+      }),
+      fileFilter: imageFileFilter, // ✅ filter เฉพาะ .jpg .jpeg .png .gif
+    }),
+  )
+  @Post(':id/update')
+  async updateAdmin(
+    @Req() req: Request,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const rawBody = req.body;
+    const dto = plainToInstance(UpdateAdminDto, rawBody);
+
+    // ✅ ตรวจสอบความถูกต้องด้วย class-validator
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+
+    // ✅ แนบไฟล์ถ้ามี
+    if (file) {
+      dto.avatar_url = `/uploads/${file.filename}`;
+    }
+    try {
+      return this.adminsService.update(req.params.id, dto);
+    } catch (error) {
+      // ❌ ถ้า save admin ไม่สำเร็จ → ลบไฟล์ออก
+      if (file?.path) {
+        const fullPath = path.resolve(file.path);
         fs.unlink(fullPath, (err) => {
           if (err) console.error('❌ Failed to remove uploaded file:', err);
         });

@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, IsOptional, IsBoolean } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
 
 export class CreateAdminDto {
   @IsString()
@@ -12,10 +13,11 @@ export class CreateAdminDto {
   email: string;
 
   @IsString()
-  password: string;
+  hashed_password: string;
 
+  @IsOptional()
   @IsString()
-  role_id: number;
+  role_id?: string;
 
   @IsOptional()
   @IsString()
@@ -26,6 +28,10 @@ export class CreateAdminDto {
   phone_number?: string;
 
   @IsOptional()
+  @IsString()
+  avatar_url?: string;
+
+  @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === 'on')
   is_active?: boolean;
@@ -33,4 +39,10 @@ export class CreateAdminDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  password?: string;
 }
+
+export class UpdateAdminDto extends PartialType(CreateAdminDto) {}

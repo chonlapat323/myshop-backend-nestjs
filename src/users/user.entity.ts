@@ -35,8 +35,8 @@ export class User {
   @Column({ nullable: true })
   hashed_password: string;
 
-  @Column()
-  role_id: number;
+  @Column({ nullable: true })
+  role_id: string;
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   created_at: Date;
