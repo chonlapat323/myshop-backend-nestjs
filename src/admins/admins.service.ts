@@ -2,11 +2,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CreateAdminDto } from './admins.dto';
+import { CreateAdminDto, UpdateAdminDto } from './admins.dto';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
 import { User } from 'src/users/user.entity';
+import { pick } from 'src/common/utils/clean-dto.util';
 
 @Injectable()
 export class AdminsService {
@@ -20,7 +21,7 @@ export class AdminsService {
   }
 
   async create(dto: CreateAdminDto, avatarUrl?: string) {
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.hashed_password, 10);
     const newAdmin = this.adminRepo.create({
       ...dto,
       hashed_password: hashedPassword,
@@ -28,6 +29,42 @@ export class AdminsService {
     });
 
     return this.adminRepo.save(newAdmin);
+  }
+
+  async update(
+    id: string,
+    dto: UpdateAdminDto,
+    avatarFilename?: string,
+  ): Promise<User> {
+    const admin = await this.adminRepo.findOneBy({ id });
+    if (!admin) {
+      throw new NotFoundException(`Admin with ID ${id} not found`);
+    }
+
+    if (dto.password && dto.password.trim() !== '') {
+      dto.hashed_password = await bcrypt.hash(dto.password, 10);
+    }
+
+    // ✅ ถ้ามีการอัปโหลด avatar ใหม่
+    if (avatarFilename) {
+      dto.avatar_url = `/uploads/${avatarFilename}`;
+    }
+
+    const updateData = pick(dto, [
+      'first_name',
+      'last_name',
+      'email',
+      'hashed_password',
+      'role_id',
+      'phone_number',
+      'is_active',
+      'note',
+      'avatar_url',
+    ]);
+
+    await this.adminRepo.update(id, updateData);
+
+    return this.adminRepo.findOneByOrFail({ id });
   }
 
   async findAll() {

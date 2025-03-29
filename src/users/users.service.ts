@@ -14,7 +14,7 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { email } });
   }
 
-  async findByRoles(roleIds: number[]): Promise<User[]> {
+  async findByRoles(roleIds: string[]): Promise<User[]> {
     return this.usersRepository.find({
       where: roleIds.map((id) => ({ role_id: id })),
       order: { created_at: 'DESC' },

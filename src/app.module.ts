@@ -7,8 +7,15 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { AdminsModule } from './admins/admins.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 @Module({
   imports: [
+    // 👇 เพิ่มบรรทัดนี้!
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'), // path จริง
+      serveRoot: '/uploads', // URL ที่จะเข้าถึงได้
+    }),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost', // หรือชื่อ container ของ PostgreSQL
