@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
+  Param,
   Post,
   Req,
   UploadedFile,
@@ -19,12 +21,8 @@ import { extname } from 'path';
 import * as path from 'path';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { raw } from 'express';
-export enum UserRole {
-  ADMIN = '1',
-  SUPERVISOR = '2',
-  MEMBER = '3',
-}
+import { UserRole } from 'src/constants/user-role.enum';
+
 @Controller('users')
 export class UserController {
   constructor(private readonly usersService: UsersService) {}
@@ -39,6 +37,17 @@ export class UserController {
   @Get('members')
   findMembers() {
     return this.usersService.findByRoles([UserRole.MEMBER]);
+  }
+
+  @Get('members/:id')
+  async getMemberById(@Param('id') id: string) {
+    const member = await this.usersService.findMemberById(id);
+
+    if (!member || member.role_id !== '3') {
+      throw new NotFoundException('Member not found');
+    }
+
+    return member;
   }
 
   @Post()

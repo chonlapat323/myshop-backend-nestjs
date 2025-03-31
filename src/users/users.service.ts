@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -13,6 +17,25 @@ export class UsersService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
   ) {}
+
+  async findByEmail(email: string): Promise<User | undefined | null> {
+    return this.usersRepository.findOne({ where: { email } });
+  }
+
+  async findMemberById(id: string) {
+    const member = await this.usersRepository.findOne({ where: { id } });
+
+    if (!member) {
+      throw new NotFoundException('ไม่พบผู้ใช้นี้ในระบบ');
+    }
+
+    // ✅ ตรวจสอบว่า role_id เป็น member (เช่น '3')
+    if (member.role_id !== '3') {
+      throw new NotFoundException('ผู้ใช้นี้ไม่ใช่สมาชิก');
+    }
+
+    return member;
+  }
 
   async create(dto: CreateUserDto, avatarUrl?: string): Promise<User> {
     const exitsting = await this.usersRepository.findOne({
@@ -42,10 +65,6 @@ export class UsersService {
     });
 
     return await this.usersRepository.save(user);
-  }
-
-  async findByEmail(email: string): Promise<User | undefined | null> {
-    return this.usersRepository.findOne({ where: { email } });
   }
 
   async findByRoles(roleIds: string[]): Promise<User[]> {
