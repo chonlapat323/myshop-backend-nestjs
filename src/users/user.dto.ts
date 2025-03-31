@@ -1,5 +1,6 @@
 // src/users/dto/create-user.dto.ts
 
+import { PartialType } from '@nestjs/mapped-types';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
@@ -9,6 +10,7 @@ import {
   Matches,
   ValidateIf,
   IsBoolean,
+  IsString,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -28,9 +30,15 @@ export class CreateUserDto {
   phone_number?: string;
 
   @IsOptional()
+  @IsString()
+  avatar_url?: string;
+
+  @IsOptional()
   note?: string;
 
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === 'on')
   is_active: boolean;
 }
+
+export class UpdateUserDto extends PartialType(CreateUserDto) {}
