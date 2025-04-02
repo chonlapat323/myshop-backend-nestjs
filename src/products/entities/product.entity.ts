@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Variant } from './variant.entity';
 import { Tag } from './tag.entity';
+import { ProductImage } from './product-image.entity';
 
 @Entity('products')
 export class Product {
@@ -48,8 +49,12 @@ export class Product {
   @Column({ default: 0 })
   soldCount: number;
 
-  @Column()
-  imageUrl: string;
+  // เพิ่มใน Product entity
+  @OneToMany(() => ProductImage, (image) => image.product, {
+    cascade: true,
+    eager: true,
+  })
+  images: ProductImage[];
 
   @Column({ default: true })
   isActive: boolean;

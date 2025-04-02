@@ -1,44 +1,39 @@
-// src/products/dto/create-product.dto.ts
 import {
-  IsString,
+  IsArray,
+  IsBoolean,
   IsNumber,
   IsOptional,
-  IsBoolean,
-  IsArray,
+  IsString,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 class VariantDto {
   @IsString()
   name: string;
 
-  @IsOptional()
-  @IsNumber()
-  price?: number;
-
-  @IsNumber()
-  stock: number;
-
-  @IsOptional()
   @IsString()
-  imageUrl?: string;
+  value: string;
 }
-
 export class CreateProductDto {
+  @Transform(({ value }) => value?.toString())
   @IsString()
   name: string;
 
+  @Transform(({ value }) => value?.toString())
   @IsString()
   description: string;
 
+  @Transform(({ value }) => parseFloat(value))
   @IsNumber()
   price: number;
 
   @IsOptional()
+  @Transform(({ value }) => parseFloat(value))
   @IsNumber()
   discountPrice?: number;
 
+  @Transform(({ value }) => parseInt(value, 10))
   @IsNumber()
   stock: number;
 
@@ -48,21 +43,27 @@ export class CreateProductDto {
   @IsString()
   brand: string;
 
-  @IsString()
-  imageUrl: string;
-
-  @IsOptional()
+  @Transform(({ value }) => value === 'true')
   @IsBoolean()
-  isActive?: boolean;
+  is_active: boolean;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+    return value ? value.split(',').map((v: string) => v.trim()) : [];
+  })
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => VariantDto)
-  variants?: VariantDto[];
+  @IsString({ each: true })
+  tags?: string[];
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  tags?: string[];
+  imageUrls?: string[];
+
+  // หากใช้ variants ค่อยเพิ่มภายหลัง
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => VariantDto)
+  variants?: VariantDto[];
 }
