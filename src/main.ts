@@ -17,7 +17,19 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.use('/uploads', express.static(join(__dirname, '..', 'public/uploads')));
+  app.use(
+    '/uploads/products',
+    express.static(join(__dirname, '..', 'public/uploads/products')),
+  );
+  app.use(
+    '/uploads/users',
+    express.static(join(__dirname, '..', 'public/uploads/users')),
+  );
+
+  app.use(
+    '/temp-uploads',
+    express.static(join(__dirname, '..', 'public/temp-uploads')),
+  );
   app.enableCors({
     origin: 'http://localhost:3000', // อนุญาตเฉพาะ Next.js ที่รันบนพอร์ต 3001
     credentials: true, // อนุญาตให้ส่ง cookies หรือ headers อื่น ๆ

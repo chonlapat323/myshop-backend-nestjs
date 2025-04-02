@@ -9,6 +9,12 @@ import { ConfigModule } from '@nestjs/config';
 import { AdminsModule } from './admins/admins.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { ProductsModule } from './products/products.module';
+import { Product } from './products/entities/product.entity';
+import { Variant } from './products/entities/variant.entity';
+import { Tag } from './products/entities/tag.entity';
+import { CleanupService } from './tasks/cleanup.service';
+import { ProductImage } from './products/entities/product-image.entity';
 @Module({
   imports: [
     // 👇 เพิ่มบรรทัดนี้!
@@ -23,7 +29,7 @@ import { join } from 'path';
       username: 'root', // เปลี่ยนเป็น username ของคุณ
       password: 'admin', // เปลี่ยนเป็น password ของคุณ
       database: 'ecommerce-db', // เปลี่ยนเป็นชื่อ database ของคุณ
-      entities: [User], // โหลด entity ที่เกี่ยวข้อง
+      entities: [User, Product, Variant, Tag, ProductImage], // โหลด entity ที่เกี่ยวข้อง
       synchronize: true, // ปิดการ sync เพราะตารางมีอยู่แล้ว
     }),
     ConfigModule.forRoot({
@@ -33,8 +39,9 @@ import { join } from 'path';
     UsersModule,
     AuthModule,
     AdminsModule,
+    ProductsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, CleanupService],
 })
 export class AppModule {}
