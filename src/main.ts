@@ -19,16 +19,16 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.use(
     '/uploads/products',
-    express.static(join(__dirname, '..', 'public/uploads/products')),
+    express.static(join(__dirname, '..', 'uploads/products')),
   );
   app.use(
     '/uploads/users',
-    express.static(join(__dirname, '..', 'public/uploads/users')),
+    express.static(join(__dirname, '..', 'uploads/users')),
   );
 
   app.use(
     '/temp-uploads',
-    express.static(join(__dirname, '..', 'public/temp-uploads')),
+    express.static(join(__dirname, '..', 'temp-uploads')),
   );
   app.enableCors({
     origin: 'http://localhost:3000', // อนุญาตเฉพาะ Next.js ที่รันบนพอร์ต 3001

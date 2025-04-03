@@ -77,7 +77,6 @@ export class UserController {
     @UploadedFile() avatar?: Express.Multer.File,
   ) {
     const rawBody = req.body;
-    console.log(rawBody);
     const avatarUrl = avatar ? `/uploads/${avatar.filename}` : undefined;
     // ✅ แปลงจาก plain object → DTO
     const dto = plainToInstance(CreateUserDto, rawBody);

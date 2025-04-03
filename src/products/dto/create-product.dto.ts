@@ -7,6 +7,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { PartialType } from '@nestjs/mapped-types';
 
 class VariantDto {
   @IsString()
@@ -67,3 +68,4 @@ export class CreateProductDto {
   @Type(() => VariantDto)
   variants?: VariantDto[];
 }
+export class UpdateProductDto extends PartialType(CreateProductDto) {}

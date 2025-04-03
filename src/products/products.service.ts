@@ -5,16 +5,19 @@ import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { Variant } from './entities/variant.entity';
 import { Tag } from './entities/tag.entity';
-import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ProductImage } from './entities/product-image.entity';
-
+// product.service.ts
+import { In } from 'typeorm';
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
+    @InjectRepository(ProductImage)
+    private readonly productImageRepo: Repository<ProductImage>,
   ) {}
 
   findAll() {
@@ -106,8 +109,8 @@ export class ProductsService {
       const image = this.productRepo.manager.create(ProductImage, {
         url: finalUrl, // ✅ เก็บ path ที่ถูกต้อง
         is_main: index === 0,
+        order_image: index, // ✅ เพิ่มตรงนี้
       });
-
       imageEntities.push(image);
     }
 
@@ -122,8 +125,19 @@ export class ProductsService {
     return this.productRepo.save(product);
   }
 
-  async update(id: number, data: Partial<Product>) {
-    await this.productRepo.update(id, data);
+  async update(id: number, dto: UpdateProductDto) {
+    // 🔸 แยก field ที่ไม่ต้องการให้เข้า repo
+    const { variants, imageUrls, tags, ...rest } = dto;
+
+    // ✅ update ส่วนหลักก่อน
+    await this.productRepo.update(id, {
+      ...rest,
+      // ถ้าต้องแปลง tags string เป็น array → ทำที่นี่
+    });
+    if (imageUrls) {
+      await this.syncImages(id, imageUrls);
+    }
+
     return this.findOne(id);
   }
 
@@ -154,5 +168,90 @@ export class ProductsService {
 
     // ✅ ลบจาก DB
     return await this.productRepo.remove(product);
+  }
+
+  async removeImage(id: number) {
+    const image = await this.productRepo.manager.findOne(ProductImage, {
+      where: { id },
+    });
+
+    if (!image) {
+      throw new NotFoundException('Image not found');
+    }
+    const productId = image.productId;
+    const wasMain = image.is_main;
+    const filename = image.url.split('/').pop();
+    const imagePath = path.join(
+      __dirname,
+      '..',
+      '..',
+      'uploads',
+      'products',
+      filename!,
+    );
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    } else {
+      console.log('error path');
+    }
+    await this.productRepo.manager.remove(ProductImage, image);
+    const result: any = {
+      success: true,
+      message: 'Image removed successfully',
+      newMainImage: null,
+    };
+
+    if (wasMain) {
+      const remainingImages = await this.productImageRepo.find({
+        where: { productId },
+        order: { order_image: 'ASC' },
+      });
+      for (let i = 0; i < remainingImages.length; i++) {
+        remainingImages[i].order_image = i;
+      }
+      if (remainingImages.length > 0) {
+        remainingImages[0].is_main = true;
+
+        await this.productImageRepo.save(remainingImages[0]);
+        // result.newMainImage = promoted;
+      }
+    }
+
+    return result;
+  }
+
+  async syncImages(productId: number, imageUrls: string[]) {
+    const existingImages = await this.productImageRepo.find({
+      where: { productId },
+    });
+
+    const existingUrls = existingImages.map((img) => img.url);
+
+    // 🔥 หา images ที่ต้องลบ
+    const imagesToDelete = existingImages.filter(
+      (img) => !imageUrls.includes(img.url),
+    );
+
+    // ➕ หา images ที่ต้องเพิ่ม
+    const urlsToAdd = imageUrls.filter((url) => !existingUrls.includes(url));
+
+    // ✅ ลบภาพ
+    if (imagesToDelete.length > 0) {
+      await this.productImageRepo.delete({
+        id: In(imagesToDelete.map((img) => img.id)),
+      });
+    }
+
+    // ✅ เพิ่มภาพ
+    if (urlsToAdd.length > 0) {
+      const newImages = urlsToAdd.map((url) =>
+        this.productImageRepo.create({
+          url,
+          productId, // ⚠️ ต้องเป็น object ที่ match relation
+        }),
+      );
+
+      await this.productImageRepo.save(newImages);
+    }
   }
 }

@@ -13,9 +13,10 @@ import {
   Query,
   UploadedFiles,
   BadRequestException,
+  Patch,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
-import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -67,6 +68,14 @@ export class ProductsController {
     return this.productService.create(data);
   }
 
+  @Patch(':id')
+  async updateProduct(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProductDto,
+  ) {
+    return this.productService.update(id, dto);
+  }
+
   @Put(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
     return this.productService.update(id, data);
@@ -75,5 +84,10 @@ export class ProductsController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.productService.remove(id);
+  }
+
+  @Delete('/images/:id')
+  async removeImage(@Param('id', ParseIntPipe) id: number) {
+    return this.productService.removeImage(id);
   }
 }
