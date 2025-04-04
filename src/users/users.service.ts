@@ -93,7 +93,7 @@ export class UsersService {
       'note',
       'is_active',
     ]);
-
+    console.log(avatarUrl);
     const user = this.usersRepository.create({
       ...userData,
       hashed_password: hashed,
@@ -129,6 +129,7 @@ export class UsersService {
         '..',
         '..',
         'public',
+        'users',
         admin.avatar_url,
       );
       fs.unlink(filePath, (err) => {

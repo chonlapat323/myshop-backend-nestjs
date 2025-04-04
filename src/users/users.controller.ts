@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Body,
   Controller,
   Delete,
   Get,
@@ -62,7 +61,7 @@ export class UserController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: './public/uploads',
+        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -77,7 +76,8 @@ export class UserController {
     @UploadedFile() avatar?: Express.Multer.File,
   ) {
     const rawBody = req.body;
-    const avatarUrl = avatar ? `/uploads/${avatar.filename}` : undefined;
+    const avatarUrl = avatar ? `/uploads/users/${avatar.filename}` : undefined;
+    console.log(avatarUrl);
     // ✅ แปลงจาก plain object → DTO
     const dto = plainToInstance(CreateUserDto, rawBody);
     // ✅ ตรวจสอบ DTO
@@ -114,7 +114,7 @@ export class UserController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: './public/uploads',
+        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -139,7 +139,7 @@ export class UserController {
     }
 
     if (avatar) {
-      dto.avatar_url = `/uploads/${avatar.filename}`;
+      dto.avatar_url = `/uploads/users/${avatar.filename}`;
     }
 
     try {
