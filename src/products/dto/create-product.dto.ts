@@ -8,7 +8,14 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { PartialType } from '@nestjs/mapped-types';
+export class ImageUrlDto {
+  @IsOptional()
+  @IsNumber()
+  id?: number;
 
+  @IsString()
+  url: string;
+}
 class VariantDto {
   @IsString()
   name: string;
@@ -58,9 +65,9 @@ export class CreateProductDto {
   tags?: string[];
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  imageUrls?: string[];
+  @ValidateNested({ each: true })
+  @Type(() => ImageUrlDto)
+  imageUrls?: ImageUrlDto[];
 
   // หากใช้ variants ค่อยเพิ่มภายหลัง
   @IsOptional()

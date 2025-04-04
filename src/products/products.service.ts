@@ -5,7 +5,11 @@ import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { Variant } from './entities/variant.entity';
 import { Tag } from './entities/tag.entity';
-import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
+import {
+  CreateProductDto,
+  ImageUrlDto,
+  UpdateProductDto,
+} from './dto/create-product.dto';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ProductImage } from './entities/product-image.entity';
@@ -78,10 +82,10 @@ export class ProductsService {
     const imageEntities: ProductImage[] = [];
     // 🔍 ย้ายไฟล์จาก temp → uploads และเปลี่ยน path ให้ถูกต้อง
     for (const [index, url] of imageUrls.entries()) {
-      let finalUrl = url;
+      let finalUrl = url.url;
 
-      if (url.startsWith('/temp-uploads/')) {
-        const filename = url.split('/').pop();
+      if (url.url.startsWith('/temp-uploads/')) {
+        const filename = url.url.split('/').pop();
         if (!filename) continue;
 
         const tempPath = path.join(
@@ -220,38 +224,47 @@ export class ProductsService {
     return result;
   }
 
-  async syncImages(productId: number, imageUrls: string[]) {
+  async syncImages(productId: number, imageUrls: ImageUrlDto[]) {
     const existingImages = await this.productImageRepo.find({
       where: { productId },
     });
 
-    const existingUrls = existingImages.map((img) => img.url);
+    const existingMap = new Map(existingImages.map((img) => [img.url, img]));
 
-    // 🔥 หา images ที่ต้องลบ
-    const imagesToDelete = existingImages.filter(
-      (img) => !imageUrls.includes(img.url),
+    const incomingUrls = imageUrls.map((img) => img.url);
+
+    // 🔥 ลบรูปที่ไม่มีในรายการใหม่
+    const toDelete = existingImages.filter(
+      (img) => !incomingUrls.includes(img.url),
     );
-
-    // ➕ หา images ที่ต้องเพิ่ม
-    const urlsToAdd = imageUrls.filter((url) => !existingUrls.includes(url));
-
-    // ✅ ลบภาพ
-    if (imagesToDelete.length > 0) {
+    if (toDelete.length > 0) {
       await this.productImageRepo.delete({
-        id: In(imagesToDelete.map((img) => img.id)),
+        id: In(toDelete.map((img) => img.id)),
       });
     }
 
-    // ✅ เพิ่มภาพ
-    if (urlsToAdd.length > 0) {
-      const newImages = urlsToAdd.map((url) =>
-        this.productImageRepo.create({
-          url,
-          productId, // ⚠️ ต้องเป็น object ที่ match relation
-        }),
-      );
+    // ➕ เพิ่ม/อัปเดตรูปใหม่ + อัปเดตลำดับและ main
+    const imagesToSave: ProductImage[] = [];
 
-      await this.productImageRepo.save(newImages);
+    for (let i = 0; i < imageUrls.length; i++) {
+      const { url } = imageUrls[i];
+      const existing = existingMap.get(url);
+      if (existing) {
+        existing.order_image = i;
+        existing.is_main = i === 0;
+        imagesToSave.push(existing);
+      } else {
+        imagesToSave.push(
+          this.productImageRepo.create({
+            url,
+            productId,
+            order_image: i,
+            is_main: i === 0,
+          }),
+        );
+      }
     }
+
+    await this.productImageRepo.save(imagesToSave);
   }
 }
