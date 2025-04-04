@@ -31,6 +31,7 @@ import { ProductImage } from './products/entities/product-image.entity';
       database: 'ecommerce-db', // เปลี่ยนเป็นชื่อ database ของคุณ
       entities: [User, Product, Variant, Tag, ProductImage], // โหลด entity ที่เกี่ยวข้อง
       synchronize: true, // ปิดการ sync เพราะตารางมีอยู่แล้ว
+      dropSchema: false, // ✅ เพิ่มบรรทัดนี้
     }),
     ConfigModule.forRoot({
       isGlobal: true, // ทำให้ ConfigService สามารถใช้งานได้ในทุก Module
