@@ -1,15 +1,11 @@
 import {
   BadRequestException,
-  Body,
   Controller,
   Get,
-  ParseUUIDPipe,
   Post,
-  Put,
   Req,
   UploadedFile,
   UseInterceptors,
-  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -44,7 +40,7 @@ export class AdminsController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: './public/uploads',
+        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -59,7 +55,7 @@ export class AdminsController {
     @Req() req: Request, // 👈 รับ request ทั้งก้อนแทน @Body()
   ) {
     const rawBody = req.body;
-    const avatarUrl = avatar ? `/uploads/${avatar.filename}` : undefined;
+    const avatarUrl = avatar ? `/uploads/users/${avatar.filename}` : undefined;
 
     // ✅ ป้องกัน hashed_password ไม่เป็น string
     if (typeof rawBody.hashed_password !== 'string') {
@@ -101,7 +97,7 @@ export class AdminsController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: './uploads',
+        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
         filename: editFileName, // ✅ ใช้ฟังก์ชัน rename ของคุณ
       }),
       fileFilter: imageFileFilter, // ✅ filter เฉพาะ .jpg .jpeg .png .gif
@@ -123,7 +119,15 @@ export class AdminsController {
 
     // ✅ แนบไฟล์ถ้ามี
     if (file) {
-      dto.avatar_url = `/uploads/${file.filename}`;
+      dto.avatar_url = `/uploads/users/${file.filename}`;
+      // ✅ ลบรูปเก่า
+      const admin = await this.findOne(req.params.id);
+      const oldPath = admin.avatar_url
+        ? path.join(__dirname, '..', '..', admin.avatar_url)
+        : null;
+      if (oldPath && fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
     }
     try {
       return this.adminsService.update(req.params.id, dto);
