@@ -90,12 +90,47 @@ export class CategoriesController {
     return this.categoriesService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(
+  // PATCH หรือ POST method แล้วแต่คุณเลือกใช้ (ในตัวอย่างใช้ POST)
+  @Post(':id/update') // หรือใช้ @Post(':id/update') ก็ได้
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './public/uploads/categories',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = `image-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          const ext = path.extname(file.originalname);
+          cb(null, `${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  async updateCategory(
     @Param('id') id: string,
-    @Body() updateCategoryDto: UpdateCategoryDto,
+    @Body() body: UpdateCategoryDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.categoriesService.update(+id, updateCategoryDto);
+    const imagePath = file ? `/uploads/categories/${file.filename}` : undefined;
+
+    try {
+      const updatedCategory = await this.categoriesService.update(
+        +id,
+        body,
+        imagePath,
+      );
+      return {
+        message: '✅ Category updated successfully',
+        category: updatedCategory,
+      };
+    } catch (error) {
+      // ถ้าอัปโหลดภาพแล้วเกิด error ต้องลบภาพทิ้ง
+      if (file?.path) {
+        const fullPath = path.resolve(file.path);
+        fs.unlink(fullPath, (err) => {
+          if (err) console.error('❌ Failed to remove uploaded file:', err);
+        });
+      }
+      throw error;
+    }
   }
 
   @Delete(':id')

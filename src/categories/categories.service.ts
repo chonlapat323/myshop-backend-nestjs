@@ -42,8 +42,12 @@ export class CategoriesService {
     return `This action returns all categories`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} category`;
+  async findOne(id: number) {
+    const category = await this.categoryRepo.findOneBy({ id });
+    if (!category) {
+      throw new NotFoundException('ไม่พบหมวดหมู่');
+    }
+    return category;
   }
 
   async findPaginated(limit: number, skip: number) {
@@ -61,8 +65,42 @@ export class CategoriesService {
     };
   }
 
-  update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    return `This action updates a #${id} category`;
+  async update(id: number, dto: UpdateCategoryDto, imagePath?: string) {
+    const category = await this.categoryRepo.findOneBy({ id });
+    if (!category) {
+      throw new NotFoundException('ไม่พบหมวดหมู่');
+    }
+
+    // ถ้าอัปโหลดภาพใหม่ และ category มีภาพเดิม → ลบภาพเดิมออกจาก disk
+    if (imagePath && category.image) {
+      const oldImagePath = path.join(
+        __dirname,
+        '..',
+        '..',
+        'public',
+        category.image,
+      );
+      fs.unlink(oldImagePath, (err) => {
+        if (err) console.error('❌ Failed to remove old image:', err);
+      });
+    }
+
+    Object.assign(category, dto);
+    if (imagePath) {
+      category.image = imagePath;
+    }
+
+    try {
+      return await this.categoryRepo.save(category);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).code === '23505'
+      ) {
+        throw new ConflictException('ชื่อหมวดหมู่ซ้ำ');
+      }
+      throw new InternalServerErrorException('ไม่สามารถแก้ไขหมวดหมู่ได้');
+    }
   }
 
   async remove(id: number) {
