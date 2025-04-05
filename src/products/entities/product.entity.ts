@@ -8,15 +8,20 @@ import {
   OneToMany,
   ManyToMany,
   JoinTable,
+  ManyToOne,
 } from 'typeorm';
 import { Variant } from './variant.entity';
 import { Tag } from './tag.entity';
 import { ProductImage } from './product-image.entity';
+import { Category } from 'src/categories/entities/category.entity';
 
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Category, (category) => category.products)
+  category: Category;
 
   @Column()
   name: string;
