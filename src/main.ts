@@ -23,10 +23,12 @@ async function bootstrap() {
       throw exception;
     },
   });
+
   app.use(
     '/uploads/products',
     express.static(join(__dirname, '..', 'uploads/products')),
   );
+
   app.use(
     '/uploads/users',
     express.static(join(__dirname, '..', 'uploads/users')),
@@ -36,6 +38,12 @@ async function bootstrap() {
     '/temp-uploads',
     express.static(join(__dirname, '..', 'temp-uploads')),
   );
+
+  app.use(
+    '/public/uploads/categories',
+    express.static(join(__dirname, '..', 'public/uploads/categories')),
+  );
+
   app.enableCors({
     origin: 'http://localhost:3000', // อนุญาตเฉพาะ Next.js ที่รันบนพอร์ต 3001
     credentials: true, // อนุญาตให้ส่ง cookies หรือ headers อื่น ๆ
