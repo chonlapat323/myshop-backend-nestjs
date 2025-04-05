@@ -1,0 +1,105 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import { CategoriesService } from './categories.service';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as path from 'path';
+import * as fs from 'fs';
+
+@Controller('categories')
+export class CategoriesController {
+  constructor(private readonly categoriesService: CategoriesService) {}
+
+  @Post()
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: path.join(
+          __dirname,
+          '..',
+          '..',
+          'public',
+          'uploads',
+          'categories',
+        ),
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = path.extname(file.originalname);
+          cb(null, `image-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  async create(
+    @Body() createCategoryDto: CreateCategoryDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const imagePath = file
+      ? `/public/uploads/categories/${file.filename}`
+      : undefined;
+
+    try {
+      const newCategory = await this.categoriesService.create(
+        createCategoryDto,
+        imagePath,
+      );
+      return {
+        message: '✅ Category created successfully',
+        category: newCategory,
+      };
+    } catch (error) {
+      if (file?.path) {
+        const fullPath = path.resolve(file.path);
+        fs.unlink(fullPath, (err) => {
+          if (err) console.error('❌ Failed to remove uploaded file:', err);
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Get()
+  findAll() {
+    return this.categoriesService.findAll();
+  }
+
+  @Get('paginated')
+  async findPaginated(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const skip = (page - 1) * limit;
+    return this.categoriesService.findPaginated(limit, skip);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.categoriesService.findOne(+id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() updateCategoryDto: UpdateCategoryDto,
+  ) {
+    return this.categoriesService.update(+id, updateCategoryDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.categoriesService.remove(+id);
+  }
+}

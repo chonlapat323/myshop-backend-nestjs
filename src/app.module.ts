@@ -15,6 +15,8 @@ import { Variant } from './products/entities/variant.entity';
 import { Tag } from './products/entities/tag.entity';
 import { CleanupService } from './tasks/cleanup.service';
 import { ProductImage } from './products/entities/product-image.entity';
+import { CategoriesModule } from './categories/categories.module';
+import { Category } from './categories/entities/category.entity';
 @Module({
   imports: [
     // 👇 เพิ่มบรรทัดนี้!
@@ -29,7 +31,7 @@ import { ProductImage } from './products/entities/product-image.entity';
       username: 'root', // เปลี่ยนเป็น username ของคุณ
       password: 'admin', // เปลี่ยนเป็น password ของคุณ
       database: 'ecommerce-db', // เปลี่ยนเป็นชื่อ database ของคุณ
-      entities: [User, Product, Variant, Tag, ProductImage], // โหลด entity ที่เกี่ยวข้อง
+      entities: [User, Product, Variant, Tag, ProductImage, Category], // โหลด entity ที่เกี่ยวข้อง
       synchronize: true, // ปิดการ sync เพราะตารางมีอยู่แล้ว
       dropSchema: false, // ✅ เพิ่มบรรทัดนี้
     }),
@@ -41,6 +43,7 @@ import { ProductImage } from './products/entities/product-image.entity';
     AuthModule,
     AdminsModule,
     ProductsModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService, CleanupService],
