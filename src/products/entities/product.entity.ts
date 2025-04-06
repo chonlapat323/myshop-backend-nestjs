@@ -9,6 +9,7 @@ import {
   ManyToMany,
   JoinTable,
   ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Variant } from './variant.entity';
 import { Tag } from './tag.entity';
@@ -20,8 +21,12 @@ export class Product {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Category, (category) => category.products)
-  category: Category;
+  @ManyToOne(() => Category, (category) => category.products, {
+    nullable: true,
+    onDelete: 'SET NULL', // ถ้า category ถูกลบ ไม่ให้ลบ product ทิ้ง
+  })
+  @JoinColumn({ name: 'category_id' })
+  category: Category | null;
 
   @Column()
   name: string;

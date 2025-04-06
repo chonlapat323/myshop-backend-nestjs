@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -39,14 +40,20 @@ export class CategoriesService {
   }
 
   findAll() {
-    return `This action returns all categories`;
+    return this.categoryRepo.find({ where: { is_active: true } });
   }
 
   async findOne(id: number) {
+    if (isNaN(id)) {
+      throw new BadRequestException('ID ไม่ถูกต้อง');
+    }
+
     const category = await this.categoryRepo.findOneBy({ id });
+
     if (!category) {
       throw new NotFoundException('ไม่พบหมวดหมู่');
     }
+
     return category;
   }
 

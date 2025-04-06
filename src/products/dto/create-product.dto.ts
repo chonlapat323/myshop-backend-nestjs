@@ -13,6 +13,11 @@ export class ImageUrlDto {
   @IsNumber()
   id?: number;
 
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value))
+  @IsNumber()
+  category_id?: number;
+
   @IsString()
   url: string;
 }
@@ -24,6 +29,9 @@ class VariantDto {
   value: string;
 }
 export class CreateProductDto {
+  @IsNumber()
+  category_id: number;
+
   @Transform(({ value }) => value?.toString())
   @IsString()
   name: string;
@@ -51,7 +59,7 @@ export class CreateProductDto {
   @IsString()
   brand: string;
 
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   is_active: boolean;
 
@@ -75,4 +83,9 @@ export class CreateProductDto {
   @Type(() => VariantDto)
   variants?: VariantDto[];
 }
-export class UpdateProductDto extends PartialType(CreateProductDto) {}
+export class UpdateProductDto extends PartialType(CreateProductDto) {
+  // ...
+  @IsOptional()
+  @IsNumber()
+  category_id?: number;
+}

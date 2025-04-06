@@ -71,7 +71,7 @@ export class CategoriesController {
     }
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.categoriesService.findAll();
   }
