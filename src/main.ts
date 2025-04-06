@@ -25,18 +25,18 @@ async function bootstrap() {
   });
 
   app.use(
-    '/uploads/products',
-    express.static(join(__dirname, '..', 'uploads/products')),
+    '/public/uploads/products',
+    express.static(join(__dirname, '..', 'public/uploads/products')),
   );
 
   app.use(
-    '/uploads/users',
-    express.static(join(__dirname, '..', 'uploads/users')),
+    '/public/uploads/users',
+    express.static(join(__dirname, '..', 'public/uploads/users')),
   );
 
   app.use(
-    '/temp-uploads',
-    express.static(join(__dirname, '..', 'temp-uploads')),
+    '/public/temp-uploads',
+    express.static(join(__dirname, '..', 'public/temp-uploads')),
   );
 
   app.use(

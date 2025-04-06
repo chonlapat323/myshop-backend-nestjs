@@ -15,6 +15,7 @@ import * as fs from 'fs';
 import { ProductImage } from './entities/product-image.entity';
 // product.service.ts
 import { In } from 'typeorm';
+import { Category } from 'src/categories/entities/category.entity';
 @Injectable()
 export class ProductsService {
   constructor(
@@ -31,7 +32,7 @@ export class ProductsService {
   findOne(id: number) {
     return this.productRepo.findOne({
       where: { id },
-      relations: ['tags', 'variants', 'images'],
+      relations: ['tags', 'variants', 'images', 'category'],
     });
   }
 
@@ -53,6 +54,14 @@ export class ProductsService {
 
   async create(dto: CreateProductDto) {
     const { tags, variants, imageUrls = [], ...productData } = dto;
+    const category = await this.productRepo.manager.findOne(Category, {
+      where: { id: dto.category_id },
+    });
+
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+
     // ✅ เตรียม tagEntities
     const tagEntities: Tag[] = [];
     if (tags && tags.length > 0) {
@@ -84,7 +93,7 @@ export class ProductsService {
     for (const [index, url] of imageUrls.entries()) {
       let finalUrl = url.url;
 
-      if (url.url.startsWith('/temp-uploads/')) {
+      if (url.url.startsWith('/public/temp-uploads/')) {
         const filename = url.url.split('/').pop();
         if (!filename) continue;
 
@@ -92,6 +101,7 @@ export class ProductsService {
           __dirname,
           '..',
           '..',
+          'public',
           'temp-uploads',
           filename,
         );
@@ -99,6 +109,7 @@ export class ProductsService {
           __dirname,
           '..',
           '..',
+          'public',
           'uploads',
           'products',
           filename,
@@ -106,7 +117,7 @@ export class ProductsService {
 
         if (fs.existsSync(tempPath)) {
           fs.renameSync(tempPath, finalPath);
-          finalUrl = `/uploads/products/${filename}`; // ✅ ต้องใช้ path นี้เท่านั้น
+          finalUrl = `/public/uploads/products/${filename}`; // ✅ ต้องใช้ path นี้เท่านั้น
         }
       }
 
@@ -124,20 +135,36 @@ export class ProductsService {
       images: imageEntities,
       tags: tagEntities,
       variants: variantEntities,
+      category, // ✅ ใส่ category ที่ดึงมา
     });
 
     return this.productRepo.save(product);
   }
 
   async update(id: number, dto: UpdateProductDto) {
-    // 🔸 แยก field ที่ไม่ต้องการให้เข้า repo
-    const { variants, imageUrls, tags, ...rest } = dto;
+    const { variants, imageUrls, tags, category_id, ...rest } = dto;
 
-    // ✅ update ส่วนหลักก่อน
-    await this.productRepo.update(id, {
-      ...rest,
-      // ถ้าต้องแปลง tags string เป็น array → ทำที่นี่
-    });
+    const product = await this.productRepo.findOne({ where: { id } });
+    if (!product) throw new NotFoundException('Product not found');
+
+    // 🔸 กำหนด category ใหม่
+    if (category_id) {
+      const category = await this.productRepo.manager.findOne(Category, {
+        where: { id: category_id },
+      });
+      if (!category) throw new NotFoundException('Category not found');
+      product.category = category;
+    } else {
+      product.category = null;
+    }
+
+    // 🔸 merge ข้อมูลอื่น ๆ
+    Object.assign(product, rest);
+
+    // ✅ บันทึกข้อมูล
+    await this.productRepo.save(product);
+
+    // 🔸 Sync image ถ้ามี
     if (imageUrls) {
       await this.syncImages(id, imageUrls);
     }
@@ -160,6 +187,7 @@ export class ProductsService {
         __dirname,
         '..',
         '..',
+        'public',
         'uploads',
         'products',
         filename!,
@@ -189,6 +217,7 @@ export class ProductsService {
       __dirname,
       '..',
       '..',
+      'public',
       'uploads',
       'products',
       filename!,

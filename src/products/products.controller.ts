@@ -41,7 +41,7 @@ export class ProductsController {
   @UseInterceptors(
     FilesInterceptor('files', 4, {
       storage: diskStorage({
-        destination: './temp-uploads',
+        destination: './public/temp-uploads',
         filename: (req, file, callback) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -56,7 +56,7 @@ export class ProductsController {
       throw new BadRequestException('No files uploaded');
     }
 
-    const urls = files.map((file) => `/temp-uploads/${file.filename}`);
+    const urls = files.map((file) => `/public/temp-uploads/${file.filename}`);
     return {
       message: 'Uploaded successfully',
       urls,
