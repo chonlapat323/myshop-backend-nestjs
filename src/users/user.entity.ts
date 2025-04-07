@@ -1,9 +1,11 @@
+import { Order } from 'src/orders/entities/order.entity';
 import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 @Entity('users') // ชื่อตารางใน DB
@@ -46,4 +48,7 @@ export class User {
 
   @Column({ type: 'timestamp with time zone', nullable: true })
   last_login?: Date;
+
+  @OneToMany(() => Order, (order) => order.user)
+  orders: Order[];
 }

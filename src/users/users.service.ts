@@ -83,6 +83,7 @@ export class UsersService {
       throw new ConflictException('Email นี้ถูกใช้งานแล้ว');
     }
 
+    console.log(dto.password);
     const hashed = await bcrypt.hash(dto.password, 10);
 
     const userData = pick(dto, [
@@ -93,7 +94,6 @@ export class UsersService {
       'note',
       'is_active',
     ]);
-    console.log(avatarUrl);
     const user = this.usersRepository.create({
       ...userData,
       hashed_password: hashed,
