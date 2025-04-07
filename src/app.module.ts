@@ -17,6 +17,10 @@ import { CleanupService } from './tasks/cleanup.service';
 import { ProductImage } from './products/entities/product-image.entity';
 import { CategoriesModule } from './categories/categories.module';
 import { Category } from './categories/entities/category.entity';
+import { OrdersModule } from './orders/orders.module';
+import { OrderItemModule } from './order-item/order-item.module';
+import { Order } from './orders/entities/order.entity';
+import { OrderItem } from './order-item/entities/order-item.entity';
 @Module({
   imports: [
     // 👇 เพิ่มบรรทัดนี้!
@@ -31,7 +35,16 @@ import { Category } from './categories/entities/category.entity';
       username: 'root', // เปลี่ยนเป็น username ของคุณ
       password: 'admin', // เปลี่ยนเป็น password ของคุณ
       database: 'ecommerce-db', // เปลี่ยนเป็นชื่อ database ของคุณ
-      entities: [User, Product, Variant, Tag, ProductImage, Category], // โหลด entity ที่เกี่ยวข้อง
+      entities: [
+        User,
+        Product,
+        Variant,
+        Tag,
+        ProductImage,
+        Category,
+        Order,
+        OrderItem,
+      ], // โหลด entity ที่เกี่ยวข้อง
       synchronize: true, // ปิดการ sync เพราะตารางมีอยู่แล้ว
       dropSchema: false, // ✅ เพิ่มบรรทัดนี้
     }),
@@ -44,6 +57,8 @@ import { Category } from './categories/entities/category.entity';
     AdminsModule,
     ProductsModule,
     CategoriesModule,
+    OrdersModule,
+    OrderItemModule,
   ],
   controllers: [AppController],
   providers: [AppService, CleanupService],

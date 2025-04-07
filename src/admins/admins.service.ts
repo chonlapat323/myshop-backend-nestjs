@@ -21,7 +21,7 @@ export class AdminsService {
   }
 
   async create(dto: CreateAdminDto, avatarUrl?: string) {
-    const hashedPassword = await bcrypt.hash(dto.hashed_password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password!, 10);
     const newAdmin = this.adminRepo.create({
       ...dto,
       hashed_password: hashedPassword,
