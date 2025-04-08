@@ -21,6 +21,8 @@ import { OrdersModule } from './orders/orders.module';
 import { OrderItemModule } from './order-item/order-item.module';
 import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './order-item/entities/order-item.entity';
+import { SlidesModule } from './slides/slides.module';
+import { SlideImage } from './slides/entities/slide-image.entity';
 @Module({
   imports: [
     // 👇 เพิ่มบรรทัดนี้!
@@ -44,6 +46,7 @@ import { OrderItem } from './order-item/entities/order-item.entity';
         Category,
         Order,
         OrderItem,
+        SlideImage,
       ], // โหลด entity ที่เกี่ยวข้อง
       synchronize: true, // ปิดการ sync เพราะตารางมีอยู่แล้ว
       dropSchema: false, // ✅ เพิ่มบรรทัดนี้
@@ -59,6 +62,7 @@ import { OrderItem } from './order-item/entities/order-item.entity';
     CategoriesModule,
     OrdersModule,
     OrderItemModule,
+    SlidesModule,
   ],
   controllers: [AppController],
   providers: [AppService, CleanupService],
