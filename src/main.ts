@@ -4,7 +4,6 @@ import * as cookieParser from 'cookie-parser';
 import { ArgumentsHost, ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
 import { join } from 'path';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,24 +23,18 @@ async function bootstrap() {
     },
   });
 
-  app.use(
-    '/public/uploads/products',
-    express.static(join(__dirname, '..', 'public/uploads/products')),
-  );
+  const staticFolders = ['products', 'users', 'categories', 'slides'];
 
-  app.use(
-    '/public/uploads/users',
-    express.static(join(__dirname, '..', 'public/uploads/users')),
-  );
+  for (const folder of staticFolders) {
+    app.use(
+      `/public/uploads/${folder}`,
+      express.static(join(__dirname, '..', `public/uploads/${folder}`)),
+    );
+  }
 
   app.use(
     '/public/temp-uploads',
     express.static(join(__dirname, '..', 'public/temp-uploads')),
-  );
-
-  app.use(
-    '/public/uploads/categories',
-    express.static(join(__dirname, '..', 'public/uploads/categories')),
   );
 
   app.enableCors({

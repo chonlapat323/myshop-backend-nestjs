@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { SlidesService } from './slides.service';
 import { CreateSlideDto } from './dto/create-slide.dto';
@@ -23,13 +24,16 @@ export class SlidesController {
 
   @Post()
   create(@Body() createSlideDto: CreateSlideDto) {
-    console.log('🔥 Body received:', createSlideDto);
     return this.slidesService.create(createSlideDto);
   }
 
   @Get()
-  findAll() {
-    return this.slidesService.findAll();
+  findAll(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('is_active') isActive?: string,
+  ) {
+    return this.slidesService.findAll(+page, +limit, isActive);
   }
 
   @Get(':id')

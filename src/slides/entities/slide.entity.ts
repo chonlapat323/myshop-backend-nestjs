@@ -33,10 +33,10 @@ export class Slide {
   is_active: boolean;
 
   @CreateDateColumn()
-  create_at: Date;
+  created_at: Date;
 
   @UpdateDateColumn()
-  update_at: Date;
+  updated_at: Date;
 
   @IsBoolean()
   @Column({ type: 'boolean', default: false })

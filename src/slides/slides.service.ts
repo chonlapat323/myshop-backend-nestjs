@@ -19,8 +19,16 @@ export class SlidesService {
 
   async create(dto: CreateSlideDto) {
     const { imageUrls = [], ...slideData } = dto;
-
     const imageEntities: SlideImage[] = [];
+
+    if (dto.is_default) {
+      await this.slideRepository
+        .createQueryBuilder()
+        .update()
+        .set({ is_default: false })
+        .where('is_default = :isDefault', { isDefault: true })
+        .execute();
+    }
 
     for (const [index, img] of imageUrls.entries()) {
       let finalUrl = img.url;
@@ -69,8 +77,29 @@ export class SlidesService {
     return this.slideRepository.save(slide);
   }
 
-  findAll() {
-    return `This action returns all slides`;
+  // slides.service.ts
+  async findAll(page = 1, limit = 10, isActive?: string) {
+    const skip = (page - 1) * limit;
+    const where: any = {};
+
+    if (isActive !== undefined) {
+      where.is_active = isActive === 'true';
+    }
+
+    const [slides, total] = await this.slideRepository.findAndCount({
+      where,
+      take: limit,
+      skip,
+      order: { created_at: 'DESC' },
+      relations: ['images'],
+    });
+
+    return {
+      data: slides,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalItems: total,
+    };
   }
 
   findOne(id: number) {
