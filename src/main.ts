@@ -4,6 +4,7 @@ import * as cookieParser from 'cookie-parser';
 import { ArgumentsHost, ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
 import { join } from 'path';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,14 +16,15 @@ async function bootstrap() {
       transform: true, // แปลง type ให้ตรงกับ DTO เช่น string -> number
     }),
   );
-  // app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalFilters({
-    catch(exception: any, host: ArgumentsHost) {
-      console.error('🔥 Caught exception:', exception);
-      throw exception;
+  app.useGlobalFilters(
+    {
+      catch(exception: any, host: ArgumentsHost) {
+        console.error('🔥 Caught exception:', exception);
+        throw exception;
+      },
     },
-  });
-
+    new HttpExceptionFilter(),
+  );
   const staticFolders = ['products', 'users', 'categories', 'slides'];
 
   for (const folder of staticFolders) {
