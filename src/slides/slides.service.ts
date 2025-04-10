@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateSlideDto } from './dto/create-slide.dto';
 import { UpdateSlideDto } from './dto/update-slide.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,7 +26,6 @@ export class SlidesService {
         .createQueryBuilder()
         .update()
         .set({ is_default: false })
-        .where('is_default = :isDefault', { isDefault: true })
         .execute();
     }
 
@@ -102,12 +101,91 @@ export class SlidesService {
     };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} slide`;
+  async findOne(id: string): Promise<Slide> {
+    const slide = await this.slideRepository.findOne({ where: { id } });
+    if (!slide) {
+      throw new NotFoundException('Slide not found');
+    }
+    return slide;
   }
 
-  update(id: number, updateSlideDto: UpdateSlideDto) {
-    return `This action updates a #${id} slide`;
+  async update(id: string, dto: UpdateSlideDto) {
+    const { imageUrls, ...rest } = dto;
+    const slide = await this.slideRepository.findOne({ where: { id } });
+    if (!slide) throw new NotFoundException('Slide not found');
+
+    if (dto.is_default) {
+      await this.slideRepository
+        .createQueryBuilder()
+        .update()
+        .set({ is_default: false })
+        .where('is_default = true')
+        .execute();
+    }
+    // 🔸 merge ข้อมูลอื่น ๆ เช่น title, description, is_active, is_default
+    Object.assign(slide, rest);
+
+    // ✅ บันทึกข้อมูล slide หลักก่อน
+    await this.slideRepository.save(slide);
+
+    // 🔸 Sync image ถ้ามี
+    if (imageUrls) {
+      await this.syncSlideImages(id, imageUrls);
+    }
+
+    return this.findOne(id);
+  }
+
+  private async syncSlideImages(
+    slideId: string,
+    images: { id?: number; url: string }[],
+  ) {
+    const finalImages: SlideImage[] = [];
+
+    for (const [index, img] of images.entries()) {
+      let finalUrl = img.url;
+
+      if (img.url.startsWith('/public/temp-uploads/')) {
+        const filename = img.url.split('/').pop();
+        if (!filename) continue;
+
+        const tempPath = path.join(
+          __dirname,
+          '..',
+          '..',
+          'public',
+          'temp-uploads',
+          filename,
+        );
+        const finalPath = path.join(
+          __dirname,
+          '..',
+          '..',
+          'public',
+          'uploads',
+          'slides',
+          filename,
+        );
+
+        if (fs.existsSync(tempPath)) {
+          fs.renameSync(tempPath, finalPath);
+          finalUrl = `/public/uploads/slides/${filename}`;
+        }
+      }
+
+      finalImages.push(
+        this.slideRepository.manager.create(SlideImage, {
+          id: img.id, // ถ้ามี id แสดงว่าเป็นรูปเดิม
+          url: finalUrl,
+          order_image: index,
+          slide_id: slideId,
+        }),
+      );
+    }
+
+    // 🔸 ลบรูปเก่าทิ้งทั้งหมดก่อน แล้วค่อย insert ใหม่ (ง่ายและปลอดภัยกว่า)
+    await this.slideImageRepository.delete({ slide_id: slideId });
+    await this.slideImageRepository.save(finalImages);
   }
 
   remove(id: number) {

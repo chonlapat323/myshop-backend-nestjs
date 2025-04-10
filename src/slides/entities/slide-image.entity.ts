@@ -21,6 +21,6 @@ export class SlideImage {
   @JoinColumn({ name: 'slide_id' })
   slide: Slide;
 
-  @Column()
+  @Column({ type: 'uuid' })
   slide_id: string;
 }

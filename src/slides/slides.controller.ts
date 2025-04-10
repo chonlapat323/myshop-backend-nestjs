@@ -38,12 +38,12 @@ export class SlidesController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.slidesService.findOne(+id);
+    return this.slidesService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateSlideDto: UpdateSlideDto) {
-    return this.slidesService.update(+id, updateSlideDto);
+    return this.slidesService.update(id, updateSlideDto);
   }
 
   @Delete(':id')

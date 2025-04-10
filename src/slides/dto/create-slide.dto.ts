@@ -8,12 +8,15 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-class SlideImageDto {
+export class SlideImageDto {
   @IsOptional()
   @IsNumber()
   id?: number;
   @IsString()
   url: string;
+  @IsOptional()
+  @IsNumber()
+  order_image?: number;
 }
 export class CreateSlideDto {
   @IsString()
