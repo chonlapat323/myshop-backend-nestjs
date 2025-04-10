@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { SlideImage } from './slide-image.entity';
+import { IsBoolean } from 'class-validator';
 
 @Entity('slides')
 export class Slide {
@@ -36,4 +37,8 @@ export class Slide {
 
   @UpdateDateColumn()
   update_at: Date;
+
+  @IsBoolean()
+  @Column({ type: 'boolean', default: false })
+  is_default: boolean;
 }

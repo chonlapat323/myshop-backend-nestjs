@@ -23,6 +23,7 @@ export class SlidesController {
 
   @Post()
   create(@Body() createSlideDto: CreateSlideDto) {
+    console.log('🔥 Body received:', createSlideDto);
     return this.slidesService.create(createSlideDto);
   }
 

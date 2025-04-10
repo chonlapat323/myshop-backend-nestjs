@@ -23,6 +23,7 @@ import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './order-item/entities/order-item.entity';
 import { SlidesModule } from './slides/slides.module';
 import { SlideImage } from './slides/entities/slide-image.entity';
+import { Slide } from './slides/entities/slide.entity';
 @Module({
   imports: [
     // 👇 เพิ่มบรรทัดนี้!
@@ -46,6 +47,7 @@ import { SlideImage } from './slides/entities/slide-image.entity';
         Category,
         Order,
         OrderItem,
+        Slide,
         SlideImage,
       ], // โหลด entity ที่เกี่ยวข้อง
       synchronize: true, // ปิดการ sync เพราะตารางมีอยู่แล้ว
