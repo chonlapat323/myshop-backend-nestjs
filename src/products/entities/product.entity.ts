@@ -10,6 +10,7 @@ import {
   JoinTable,
   ManyToOne,
   JoinColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { Variant } from './variant.entity';
 import { Tag } from './tag.entity';
@@ -74,4 +75,7 @@ export class Product {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn()
+  deleted_at?: Date;
 }

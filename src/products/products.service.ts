@@ -199,7 +199,7 @@ export class ProductsService {
     }
 
     // ✅ ลบจาก DB
-    return await this.productRepo.remove(product);
+    return await this.productRepo.update(id, { deleted_at: new Date() });
   }
 
   async removeImage(id: number) {
