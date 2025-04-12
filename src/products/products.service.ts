@@ -33,6 +33,7 @@ export class ProductsService {
     return this.productRepo.findOne({
       where: { id },
       relations: ['tags', 'variants', 'images', 'category'],
+      withDeleted: true,
     });
   }
 
