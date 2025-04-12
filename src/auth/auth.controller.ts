@@ -6,6 +6,7 @@ import {
   UseGuards,
   Res,
   UnauthorizedException,
+  Get,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -13,6 +14,11 @@ import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
+
+interface AuthUser {
+  email: string;
+  role: string;
+}
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -86,6 +92,28 @@ export class AuthController {
       return { message: 'Access token refreshed' };
     } catch (err) {
       throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  @Get('status')
+  async getStatus(@Req() req: Request) {
+    const token = req.cookies['token'];
+    if (!token) return { user: null };
+
+    try {
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: this.configService.get('JWT_SECRET'),
+      });
+
+      return {
+        user: {
+          email: payload.email,
+          role: payload.role,
+          sub: payload.sub,
+        },
+      };
+    } catch {
+      return { user: null }; // ✅ token หมดอายุ ก็ไม่ error
     }
   }
 

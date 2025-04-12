@@ -9,7 +9,7 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from './entities/category.entity';
-import { QueryFailedError, Repository } from 'typeorm';
+import { IsNull, QueryFailedError, Repository } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -20,27 +20,14 @@ export class CategoriesService {
     private readonly categoryRepo: Repository<Category>,
   ) {}
 
-  async create(dto: CreateCategoryDto, image?: string) {
-    const category = this.categoryRepo.create({
-      ...dto,
-      image,
-    });
-
-    try {
-      return await this.categoryRepo.save(category);
-    } catch (error) {
-      if (
-        error instanceof QueryFailedError &&
-        (error as any).code === '23505'
-      ) {
-        throw new ConflictException('ชื่อหมวดหมู่มีอยู่แล้ว');
-      }
-      throw new InternalServerErrorException('ไม่สามารถเพิ่มหมวดหมู่ได้');
-    }
+  findAllIncludingDeleted() {
+    return this.categoryRepo.find({ withDeleted: true });
   }
 
-  findAll() {
-    return this.categoryRepo.find({ where: { is_active: true } });
+  findActive() {
+    return this.categoryRepo.find({
+      where: { is_active: true, deleted_at: IsNull() },
+    });
   }
 
   async findOne(id: number) {
@@ -70,6 +57,25 @@ export class CategoriesService {
       page: skip / limit + 1,
       pageCount: Math.ceil(total / limit),
     };
+  }
+
+  async create(dto: CreateCategoryDto, image?: string) {
+    const category = this.categoryRepo.create({
+      ...dto,
+      image,
+    });
+
+    try {
+      return await this.categoryRepo.save(category);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).code === '23505'
+      ) {
+        throw new ConflictException('ชื่อหมวดหมู่มีอยู่แล้ว');
+      }
+      throw new InternalServerErrorException('ไม่สามารถเพิ่มหมวดหมู่ได้');
+    }
   }
 
   async update(id: number, dto: UpdateCategoryDto, imagePath?: string) {
@@ -128,7 +134,7 @@ export class CategoriesService {
       });
     }
 
-    await this.categoryRepo.remove(category);
+    await this.categoryRepo.softDelete(id);
 
     return { message: `Category with ID ${id} removed successfully.` };
   }

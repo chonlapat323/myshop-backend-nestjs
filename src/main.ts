@@ -16,32 +16,27 @@ async function bootstrap() {
       transform: true, // แปลง type ให้ตรงกับ DTO เช่น string -> number
     }),
   );
-  // app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalFilters({
-    catch(exception: any, host: ArgumentsHost) {
-      console.error('🔥 Caught exception:', exception);
-      throw exception;
+  app.useGlobalFilters(
+    {
+      catch(exception: any, host: ArgumentsHost) {
+        console.error('🔥 Caught exception:', exception);
+        throw exception;
+      },
     },
-  });
-
-  app.use(
-    '/public/uploads/products',
-    express.static(join(__dirname, '..', 'public/uploads/products')),
+    new HttpExceptionFilter(),
   );
+  const staticFolders = ['products', 'users', 'categories', 'slides'];
 
-  app.use(
-    '/public/uploads/users',
-    express.static(join(__dirname, '..', 'public/uploads/users')),
-  );
+  for (const folder of staticFolders) {
+    app.use(
+      `/public/uploads/${folder}`,
+      express.static(join(__dirname, '..', `public/uploads/${folder}`)),
+    );
+  }
 
   app.use(
     '/public/temp-uploads',
     express.static(join(__dirname, '..', 'public/temp-uploads')),
-  );
-
-  app.use(
-    '/public/uploads/categories',
-    express.static(join(__dirname, '..', 'public/uploads/categories')),
   );
 
   app.enableCors({

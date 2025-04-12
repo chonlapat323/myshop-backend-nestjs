@@ -2,6 +2,7 @@ import { Product } from 'src/products/entities/product.entity';
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -30,4 +31,7 @@ export class Category {
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   created_at: Date;
+
+  @DeleteDateColumn()
+  deleted_at?: Date;
 }

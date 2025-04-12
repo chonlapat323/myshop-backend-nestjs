@@ -22,6 +22,30 @@ import * as fs from 'fs';
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
+  @Get('active')
+  getActiveCategories() {
+    return this.categoriesService.findActive();
+  }
+
+  @Get('all')
+  getAllCategories() {
+    return this.categoriesService.findAllIncludingDeleted();
+  }
+
+  @Get('paginated')
+  async findPaginated(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const skip = (page - 1) * limit;
+    return this.categoriesService.findPaginated(limit, skip);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.categoriesService.findOne(+id);
+  }
+
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
@@ -69,25 +93,6 @@ export class CategoriesController {
       }
       throw error;
     }
-  }
-
-  @Get('all')
-  findAll() {
-    return this.categoriesService.findAll();
-  }
-
-  @Get('paginated')
-  async findPaginated(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ) {
-    const skip = (page - 1) * limit;
-    return this.categoriesService.findPaginated(limit, skip);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.categoriesService.findOne(+id);
   }
 
   // PATCH หรือ POST method แล้วแต่คุณเลือกใช้ (ในตัวอย่างใช้ POST)

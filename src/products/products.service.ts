@@ -33,6 +33,7 @@ export class ProductsService {
     return this.productRepo.findOne({
       where: { id },
       relations: ['tags', 'variants', 'images', 'category'],
+      withDeleted: true,
     });
   }
 
@@ -199,7 +200,7 @@ export class ProductsService {
     }
 
     // ✅ ลบจาก DB
-    return await this.productRepo.remove(product);
+    return await this.productRepo.update(id, { deleted_at: new Date() });
   }
 
   async removeImage(id: number) {
