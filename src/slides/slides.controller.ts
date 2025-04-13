@@ -36,6 +36,11 @@ export class SlidesController {
     return this.slidesService.findAll(+page, +limit, isActive);
   }
 
+  @Get('default')
+  findDefaultSlides() {
+    return this.slidesService.findDefaultSlides();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.slidesService.findOne(id);
