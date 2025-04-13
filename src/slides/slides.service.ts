@@ -17,6 +17,51 @@ export class SlidesService {
     private readonly slideImageRepository: Repository<SlideImage>,
   ) {}
 
+  // slides.service.ts
+  async findAll(page = 1, limit = 10, isActive?: string) {
+    const skip = (page - 1) * limit;
+    const where: any = {};
+
+    if (isActive !== undefined) {
+      where.is_active = isActive === 'true';
+    }
+
+    const [slides, total] = await this.slideRepository.findAndCount({
+      where,
+      take: limit,
+      skip,
+      order: { created_at: 'DESC' },
+      relations: ['images'],
+    });
+
+    return {
+      data: slides,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalItems: total,
+    };
+  }
+
+  async findOne(id: string): Promise<Slide> {
+    const slide = await this.slideRepository.findOne({ where: { id } });
+    if (!slide) {
+      throw new NotFoundException('Slide not found');
+    }
+    return slide;
+  }
+
+  async findDefault(): Promise<Slide> {
+    const slide = await this.slideRepository.findOne({
+      where: { is_default: true },
+    });
+
+    if (!slide) {
+      throw new NotFoundException('ไม่พบสไลด์ default');
+    }
+
+    return slide;
+  }
+
   async create(dto: CreateSlideDto) {
     const { imageUrls = [], ...slideData } = dto;
     const imageEntities: SlideImage[] = [];
@@ -74,39 +119,6 @@ export class SlidesService {
     });
 
     return this.slideRepository.save(slide);
-  }
-
-  // slides.service.ts
-  async findAll(page = 1, limit = 10, isActive?: string) {
-    const skip = (page - 1) * limit;
-    const where: any = {};
-
-    if (isActive !== undefined) {
-      where.is_active = isActive === 'true';
-    }
-
-    const [slides, total] = await this.slideRepository.findAndCount({
-      where,
-      take: limit,
-      skip,
-      order: { created_at: 'DESC' },
-      relations: ['images'],
-    });
-
-    return {
-      data: slides,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalItems: total,
-    };
-  }
-
-  async findOne(id: string): Promise<Slide> {
-    const slide = await this.slideRepository.findOne({ where: { id } });
-    if (!slide) {
-      throw new NotFoundException('Slide not found');
-    }
-    return slide;
   }
 
   async update(id: string, dto: UpdateSlideDto) {
