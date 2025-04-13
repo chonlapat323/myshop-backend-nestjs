@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class CreateCategoryDto {
   @IsString()
@@ -8,6 +8,10 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  link?: string; // ✅ เพิ่ม field นี้
 
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
