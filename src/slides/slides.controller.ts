@@ -36,8 +36,16 @@ export class SlidesController {
     return this.slidesService.findAll(+page, +limit, isActive);
   }
 
+  @Get('default')
+  findDefaultSlide() {
+    return this.slidesService.findDefault();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
+    if (id === 'default') {
+      throw new BadRequestException('Invalid slide id');
+    }
     return this.slidesService.findOne(id);
   }
 
