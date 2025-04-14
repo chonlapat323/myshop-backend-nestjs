@@ -42,7 +42,7 @@ export class ProductsService {
       relations: ['tags', 'variants', 'images'],
       take: limit,
       skip: skip,
-      order: { createdAt: 'DESC' },
+      order: { created_at: 'DESC' },
     });
 
     return {
@@ -51,6 +51,14 @@ export class ProductsService {
       page: skip / limit + 1,
       pageCount: Math.ceil(total / limit),
     };
+  }
+
+  async findBestSellers(): Promise<Product[]> {
+    return this.productRepo.find({
+      where: { is_best_seller: true },
+      order: { updated_at: 'DESC' },
+      take: 4,
+    });
   }
 
   async create(dto: CreateProductDto) {

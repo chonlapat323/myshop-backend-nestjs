@@ -31,6 +31,11 @@ export class ProductsController {
     return this.productService.findPaginated(+limit, +skip);
   }
 
+  @Get('best-sellers')
+  async findBestSellers() {
+    return this.productService.findBestSellers();
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.productService.findOne(id);

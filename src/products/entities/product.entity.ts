@@ -54,7 +54,7 @@ export class Product {
   variants: Variant[];
 
   @ManyToMany(() => Tag, (tag) => tag.products, { cascade: true })
-  @JoinTable() // จำเป็นสำหรับฝั่ง owner ของ ManyToMany
+  @JoinTable()
   tags: Tag[];
 
   @Column({ default: 0 })
@@ -70,11 +70,14 @@ export class Product {
   @Column({ default: true })
   is_active: boolean;
 
+  @Column({ default: false })
+  is_best_seller: boolean;
+
   @CreateDateColumn()
-  createdAt: Date;
+  created_at: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updated_at: Date;
 
   @DeleteDateColumn()
   deleted_at?: Date;

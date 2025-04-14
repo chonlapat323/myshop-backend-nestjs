@@ -63,6 +63,11 @@ export class CreateProductDto {
   @IsBoolean()
   is_active: boolean;
 
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsOptional()
+  @IsBoolean()
+  is_best_seller?: boolean;
+
   @IsOptional()
   @Transform(({ value }) => {
     if (Array.isArray(value)) return value;
