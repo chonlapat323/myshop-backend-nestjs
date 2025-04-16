@@ -23,6 +23,8 @@ import * as path from 'path';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { UserRole } from 'src/constants/user-role.enum';
+import { JwtPayload } from 'src/auth/type/jwt-payload.interface';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
 @Controller('users')
 export class UserController {
@@ -32,6 +34,12 @@ export class UserController {
   async findUsers(@Query('role') role: string, @Query('page') page: string) {
     const pageNumber = parseInt(page) || 1;
     return this.usersService.findUsers({ role, page: pageNumber });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  getMe(@CurrentUser() user: JwtPayload) {
+    return this.usersService.findUserById(user.userId);
   }
 
   @Get(':id')

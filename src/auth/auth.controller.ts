@@ -38,7 +38,7 @@ export class AuthController {
       httpOnly: true,
       //secure: process.env.NODE_ENV === 'production', // ✅ ใช้ https ใน production
       sameSite: 'lax',
-      maxAge: 1000 * 60 * 1,
+      maxAge: 1000 * 60 * 5,
       path: '/',
       secure: false, // ถ้า production ต้องเป็น true + https
     });
@@ -71,13 +71,13 @@ export class AuthController {
 
       const newAccessToken = this.jwtService.sign(
         {
+          id: payload.id,
           email: payload.email,
-          sub: payload.sub,
           role: payload.role,
         },
         {
           secret: this.configService.get('JWT_SECRET'),
-          expiresIn: '1m',
+          expiresIn: '5m',
         },
       );
 
@@ -85,7 +85,7 @@ export class AuthController {
       res.cookie('token', newAccessToken, {
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: 1000 * 60 * 1,
+        maxAge: 1000 * 60 * 5,
         secure: false, // ถ้า production ต้องเป็น true + https
       });
 
@@ -107,9 +107,9 @@ export class AuthController {
 
       return {
         user: {
+          id: payload.id,
           email: payload.email,
           role: payload.role,
-          sub: payload.sub,
         },
       };
     } catch {
