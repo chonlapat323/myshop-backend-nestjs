@@ -36,6 +36,15 @@ export class ProductsController {
     return this.productService.findBestSellers();
   }
 
+  @Get('category/:slug')
+  getByCategory(
+    @Param('slug') slug: string,
+    @Query('search') search?: string,
+    @Query('sort') sort?: 'lowest' | 'highest',
+  ) {
+    return this.productService.findByCategory(slug, search, sort);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.productService.findOne(id);

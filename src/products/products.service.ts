@@ -61,6 +61,33 @@ export class ProductsService {
     });
   }
 
+  async findByCategory(
+    slug: string,
+    search?: string,
+    sort?: 'lowest' | 'highest',
+  ): Promise<Product[]> {
+    let query = this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.images', 'image')
+      .leftJoinAndSelect('product.category', 'category')
+      .where('category.link = :link', { link: slug })
+      .andWhere('product.is_active = :active', { active: true });
+
+    if (search) {
+      query = query.andWhere('product.name ILIKE :search', {
+        search: `%${search}%`,
+      });
+    }
+
+    if (sort === 'lowest') {
+      query = query.orderBy('product.price', 'ASC');
+    } else if (sort === 'highest') {
+      query = query.orderBy('product.price', 'DESC');
+    }
+
+    return query.getMany();
+  }
+
   async create(dto: CreateProductDto) {
     const { tags, variants, imageUrls = [], ...productData } = dto;
     const category = await this.productRepo.manager.findOne(Category, {
