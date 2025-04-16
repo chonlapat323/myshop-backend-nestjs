@@ -69,6 +69,14 @@ export class CreateProductDto {
   is_best_seller?: boolean;
 
   @IsOptional()
+  @IsString()
+  additionalInformation?: string;
+
+  @IsOptional()
+  @IsString()
+  design?: string;
+
+  @IsOptional()
   @Transform(({ value }) => {
     if (Array.isArray(value)) return value;
     return value ? value.split(',').map((v: string) => v.trim()) : [];

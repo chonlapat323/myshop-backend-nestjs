@@ -60,6 +60,12 @@ export class Product {
   @Column({ default: 0 })
   soldCount: number;
 
+  @Column({ nullable: true, type: 'text' })
+  additionalInformation: string;
+
+  @Column({ nullable: true, type: 'text' })
+  design: string;
+
   // เพิ่มใน Product entity
   @OneToMany(() => ProductImage, (image) => image.product, {
     cascade: true,
