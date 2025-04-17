@@ -5,6 +5,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -162,6 +163,42 @@ export class UserController {
       }
       throw error;
     }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  @UseInterceptors(
+    FileInterceptor('avatar', {
+      storage: diskStorage({
+        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `avatar-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  async updateMe(
+    @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ) {
+    const dto = plainToInstance(UpdateUserDto, req.body);
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      if (avatar?.path) {
+        fs.unlink(path.resolve(avatar.path), () => {});
+      }
+      throw new BadRequestException(errors);
+    }
+
+    if (avatar) {
+      dto.avatar_url = `/uploads/users/${avatar.filename}`;
+    }
+
+    return this.usersService.update(user.userId, dto);
   }
 
   @Delete(':id')
