@@ -5,6 +5,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -23,6 +24,8 @@ import * as path from 'path';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { UserRole } from 'src/constants/user-role.enum';
+import { JwtPayload } from 'src/auth/type/jwt-payload.interface';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
 @Controller('users')
 export class UserController {
@@ -32,6 +35,12 @@ export class UserController {
   async findUsers(@Query('role') role: string, @Query('page') page: string) {
     const pageNumber = parseInt(page) || 1;
     return this.usersService.findUsers({ role, page: pageNumber });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  getMe(@CurrentUser() user: JwtPayload) {
+    return this.usersService.findUserById(user.userId);
   }
 
   @Get(':id')
@@ -154,6 +163,42 @@ export class UserController {
       }
       throw error;
     }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  @UseInterceptors(
+    FileInterceptor('avatar', {
+      storage: diskStorage({
+        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          cb(null, `avatar-${uniqueSuffix}${ext}`);
+        },
+      }),
+    }),
+  )
+  async updateMe(
+    @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ) {
+    const dto = plainToInstance(UpdateUserDto, req.body);
+    const errors = await validate(dto);
+    if (errors.length > 0) {
+      if (avatar?.path) {
+        fs.unlink(path.resolve(avatar.path), () => {});
+      }
+      throw new BadRequestException(errors);
+    }
+
+    if (avatar) {
+      dto.avatar_url = `/uploads/users/${avatar.filename}`;
+    }
+
+    return this.usersService.update(user.userId, dto);
   }
 
   @Delete(':id')

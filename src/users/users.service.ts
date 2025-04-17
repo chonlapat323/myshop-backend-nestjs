@@ -59,11 +59,6 @@ export class UsersService {
       throw new NotFoundException('ไม่พบผู้ใช้นี้ในระบบ');
     }
 
-    // ✅ ตรวจสอบว่า role_id เป็น member (เช่น '3')
-    if (member.role_id !== '3') {
-      throw new NotFoundException('ผู้ใช้นี้ไม่ใช่สมาชิก');
-    }
-
     return member;
   }
 
