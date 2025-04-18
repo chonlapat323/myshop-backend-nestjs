@@ -48,6 +48,12 @@ export class AddressController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Patch(':id/default')
+  setDefault(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.addressService.setDefault(id, user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.addressService.remove(id, user.userId);

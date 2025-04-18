@@ -26,6 +26,7 @@ import { SlideImage } from './slides/entities/slide-image.entity';
 import { Slide } from './slides/entities/slide.entity';
 import { AddressModule } from './address/address.module';
 import { Address } from './address/entities/address.entity';
+import { PrismaService } from './prisma/prisma.service';
 @Module({
   imports: [
     // 👇 เพิ่มบรรทัดนี้!
@@ -71,6 +72,7 @@ import { Address } from './address/entities/address.entity';
     AddressModule,
   ],
   controllers: [AppController],
-  providers: [AppService, CleanupService],
+  providers: [AppService, CleanupService, PrismaService],
+  exports: [PrismaService],
 })
 export class AppModule {}

@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Address } from './entities/address.entity';
 import { Repository } from 'typeorm';
 import { User } from 'src/users/user.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { addresses as PrismaAddress } from '@prisma/client';
 
 @Injectable()
 export class AddressService {
@@ -14,6 +20,8 @@ export class AddressService {
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+
+    private prisma: PrismaService,
   ) {}
   async create(userId: string, dto: CreateAddressDto) {
     const address = this.addressRepo.create({ ...dto, user_id: userId });
@@ -55,6 +63,31 @@ export class AddressService {
     Object.assign(address, dto);
 
     return this.addressRepo.save(address);
+  }
+
+  async setDefault(addressId: string, userId: string): Promise<PrismaAddress> {
+    // ตรวจสอบว่า address นี้เป็นของผู้ใช้จริง
+    const address = await this.prisma.addresses.findUnique({
+      where: { id: addressId },
+    });
+
+    if (!address || address.user_id !== userId) {
+      throw new ForbiddenException('คุณไม่สามารถแก้ไขที่อยู่นี้ได้');
+    }
+
+    // 1. Set is_default = false สำหรับ address ทั้งหมดของ user นี้
+    await this.prisma.addresses.updateMany({
+      where: { user_id: userId },
+      data: { is_default: false },
+    });
+
+    // 2. Set is_default = true สำหรับ address ที่เลือก
+    const updated = await this.prisma.addresses.update({
+      where: { id: addressId },
+      data: { is_default: true },
+    });
+
+    return updated;
   }
 
   async remove(id: string, userId: string) {
