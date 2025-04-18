@@ -44,6 +44,12 @@ export class PaymentMethodController {
     return this.service.update(id, user.userId, dto);
   }
 
+  @Patch(':id/default')
+  @UseGuards(JwtAuthGuard)
+  setDefault(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.service.setDefault(id, user.userId);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.service.remove(id, user.userId);

@@ -41,6 +41,28 @@ export class PaymentMethodService {
     });
   }
 
+  async setDefault(id: string, userId: string) {
+    const payment = await this.prisma.paymentMethod.findUnique({
+      where: { id },
+    });
+
+    if (!payment || payment.user_id !== userId) {
+      throw new NotFoundException('Payment method not found');
+    }
+
+    await this.prisma.paymentMethod.updateMany({
+      where: { user_id: userId },
+      data: { is_default: false },
+    });
+
+    const updated = await this.prisma.paymentMethod.update({
+      where: { id },
+      data: { is_default: true },
+    });
+
+    return updated;
+  }
+
   async remove(id: string, userId: string) {
     await this.findOne(id, userId);
 
