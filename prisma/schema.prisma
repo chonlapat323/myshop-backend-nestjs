@@ -20,3 +20,18 @@ model addresses {
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 }
+
+model PaymentMethod {
+  id               String   @id @default(uuid())
+  user_id          String // ❌ ไม่มี relation ไปยัง User ตอนนี้
+
+  cardholder_name  String
+  card_number      String
+  expiry_date      String
+  is_default       Boolean  @default(false)
+
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("payment_methods")
+}
