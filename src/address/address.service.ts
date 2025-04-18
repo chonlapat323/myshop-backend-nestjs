@@ -90,8 +90,17 @@ export class AddressService {
     return updated;
   }
 
-  async remove(id: string, userId: string) {
-    const address = await this.findOne(id, userId);
-    return this.addressRepo.remove(address);
+  async remove(id: string, userId: string): Promise<void> {
+    const address = await this.prisma.addresses.findUnique({
+      where: { id },
+    });
+
+    if (!address || address.user_id !== userId) {
+      throw new ForbiddenException('คุณไม่มีสิทธิ์ลบที่อยู่นี้');
+    }
+
+    await this.prisma.addresses.delete({
+      where: { id },
+    });
   }
 }
