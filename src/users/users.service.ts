@@ -52,7 +52,7 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { email } });
   }
 
-  async findUserById(id: string) {
+  async findUserById(id: number) {
     const member = await this.usersRepository.findOne({ where: { id } });
 
     if (!member) {
@@ -99,7 +99,7 @@ export class UsersService {
     return await this.usersRepository.save(user);
   }
 
-  async update(id: string, dto: UpdateUserDto) {
+  async update(id: number, dto: UpdateUserDto) {
     const user = await this.usersRepository.findOne({ where: { id } });
 
     if (!user) {
@@ -110,7 +110,7 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async remove(id: string) {
+  async remove(id: number) {
     const admin = await this.usersRepository.findOne({ where: { id } });
 
     if (!admin) {

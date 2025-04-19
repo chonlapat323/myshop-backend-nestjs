@@ -7,7 +7,7 @@ import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 export class PaymentMethodService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(userId: string, dto: CreatePaymentMethodDto) {
+  async create(userId: number, dto: CreatePaymentMethodDto) {
     return this.prisma.paymentMethod.create({
       data: {
         ...dto,
@@ -16,14 +16,14 @@ export class PaymentMethodService {
     });
   }
 
-  async findAll(userId: string) {
+  async findAll(userId: number) {
     return this.prisma.paymentMethod.findMany({
       where: { user_id: userId },
       orderBy: { created_at: 'desc' },
     });
   }
 
-  async findOne(id: string, userId: string) {
+  async findOne(id: number, userId: number) {
     const payment = await this.prisma.paymentMethod.findFirst({
       where: { id, user_id: userId },
     });
@@ -32,7 +32,7 @@ export class PaymentMethodService {
     return payment;
   }
 
-  async update(id: string, userId: string, dto: UpdatePaymentMethodDto) {
+  async update(id: number, userId: number, dto: UpdatePaymentMethodDto) {
     await this.findOne(id, userId);
 
     return this.prisma.paymentMethod.update({
@@ -41,7 +41,7 @@ export class PaymentMethodService {
     });
   }
 
-  async setDefault(id: string, userId: string) {
+  async setDefault(id: number, userId: number) {
     const payment = await this.prisma.paymentMethod.findUnique({
       where: { id },
     });
@@ -63,7 +63,7 @@ export class PaymentMethodService {
     return updated;
   }
 
-  async remove(id: string, userId: string) {
+  async remove(id: number, userId: number) {
     await this.findOne(id, userId);
 
     return this.prisma.paymentMethod.delete({

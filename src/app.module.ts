@@ -28,6 +28,7 @@ import { AddressModule } from './address/address.module';
 import { Address } from './address/entities/address.entity';
 import { PrismaService } from './prisma/prisma.service';
 import { PaymentMethodModule } from './payment-method/payment-method.module';
+import { CartModule } from './cart/cart.module';
 @Module({
   imports: [
     // 👇 เพิ่มบรรทัดนี้!
@@ -72,6 +73,7 @@ import { PaymentMethodModule } from './payment-method/payment-method.module';
     SlidesModule,
     AddressModule,
     PaymentMethodModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService, CleanupService, PrismaService],

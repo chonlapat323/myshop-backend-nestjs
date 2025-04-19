@@ -12,8 +12,8 @@ import { User } from 'src/users/user.entity';
 
 @Entity('addresses')
 export class Address {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   full_name: string;
@@ -41,7 +41,7 @@ export class Address {
   user: User;
 
   @Column()
-  user_id: string;
+  user_id: number;
 
   @CreateDateColumn()
   created_at: Date;

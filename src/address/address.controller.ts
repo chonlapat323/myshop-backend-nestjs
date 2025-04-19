@@ -33,14 +33,14 @@ export class AddressController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  findOne(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
     return this.addressService.findOne(id, user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @CurrentUser() user: JwtPayload,
     @Body() dto: UpdateAddressDto,
   ) {
@@ -49,13 +49,13 @@ export class AddressController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/default')
-  setDefault(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  setDefault(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
     return this.addressService.setDefault(id, user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  remove(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
     return this.addressService.remove(id, user.userId);
   }
 }
