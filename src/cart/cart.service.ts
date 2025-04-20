@@ -1,10 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateCartDto } from './dto/create-cart.dto';
 import { UpdateCartDto } from './dto/update-cart.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class CartService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getCartItemCount(userId: number) {
+    const cart = await this.prisma.cart.findFirst({
+      where: { user_id: userId },
+      include: { items: true },
+    });
+
+    return {
+      count: cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0,
+    };
+  }
 
   async addItemToCart(userId: number, productId: number, quantity: number) {
     // 1. ค้นหา cart ของ user
@@ -59,23 +74,91 @@ export class CartService {
     });
   }
 
-  create(createCartDto: CreateCartDto) {
-    return 'This action adds a new cart';
+  async getCartByUserId(userId: number) {
+    const cart = await this.prisma.cart.findFirst({
+      where: { user_id: userId },
+      include: {
+        items: {
+          orderBy: {
+            created_at: 'asc', // ✅ เรียงตามเวลาที่เพิ่มเข้า cart
+          },
+          include: {
+            products: {
+              include: {
+                product_image: {
+                  where: { is_main: true },
+                  take: 1,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!cart) {
+      return {
+        cart_id: null,
+        items: [],
+        total: 0,
+      };
+    }
+
+    return {
+      cart_id: cart.id,
+      items: cart.items.map((item) => {
+        const productImages = item.products.product_image;
+        const mainImage =
+          productImages.find((img) => img.is_main) || productImages[0];
+
+        return {
+          id: item.id,
+          product_id: item.product_id,
+          name: item.products.name,
+          quantity: item.quantity,
+          price_snapshot: item.price_snapshot,
+          image: mainImage?.url ?? null,
+        };
+      }),
+    };
   }
 
-  findAll() {
-    return `This action returns all cart`;
+  async updateCartItemQuantity(
+    cartItemId: number,
+    quantity: number,
+    userId: number,
+  ) {
+    const cartItem = await this.prisma.cart_item.findUnique({
+      where: { id: cartItemId },
+      include: {
+        cart: true,
+      },
+    });
+
+    if (!cartItem || cartItem.cart.user_id !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return this.prisma.cart_item.update({
+      where: { id: cartItemId },
+      data: { quantity },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} cart`;
-  }
+  async removeCartItem(cartItemId: number, userId: number) {
+    const cartItem = await this.prisma.cart_item.findUnique({
+      where: { id: cartItemId },
+      include: {
+        cart: true,
+      },
+    });
 
-  update(id: number, updateCartDto: UpdateCartDto) {
-    return `This action updates a #${id} cart`;
-  }
+    if (!cartItem || cartItem.cart.user_id !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} cart`;
+    return this.prisma.cart_item.delete({
+      where: { id: cartItemId },
+    });
   }
 }

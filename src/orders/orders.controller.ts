@@ -17,18 +17,17 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Order } from './entities/order.entity';
 
+@UseGuards(AuthGuard('jwt'))
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @UseGuards(AuthGuard('jwt'))
   @Post()
   create(@Req() req, @Body() createOrderDto: CreateOrderDto) {
     const userId = req.user?.userId;
     return this.ordersService.create(userId, createOrderDto);
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Get()
   async findAll(@Req() req): Promise<Order[]> {
     const user = req.user;
@@ -55,7 +54,6 @@ export class OrdersController {
     return order;
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
   update(
     @Req() req,

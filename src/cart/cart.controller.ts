@@ -21,6 +21,11 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
+  @Get('count')
+  getItemCount(@CurrentUser() user: JwtPayload) {
+    return this.cartService.getCartItemCount(user.userId);
+  }
+
   @Post('items')
   addItemToCart(@Body() dto: AddToCartDto, @CurrentUser() user: JwtPayload) {
     return this.cartService.addItemToCart(
@@ -30,28 +35,47 @@ export class CartController {
     );
   }
 
-  @Post()
-  create(@Body() createCartDto: CreateCartDto) {
-    return this.cartService.create(createCartDto);
-  }
-
   @Get()
-  findAll() {
-    return this.cartService.findAll();
+  findAll(@CurrentUser() user: JwtPayload) {
+    return this.cartService.getCartByUserId(user.userId);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.cartService.findOne(+id);
+  @Patch('items/:id')
+  updateCartItemQuantity(
+    @Param('id') id: number,
+    @Body('quantity') quantity: number,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.cartService.updateCartItemQuantity(id, quantity, user.userId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCartDto: UpdateCartDto) {
-    return this.cartService.update(+id, updateCartDto);
+  @Delete('items/:id')
+  removeCartItem(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
+    return this.cartService.removeCartItem(id, user.userId);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.cartService.remove(+id);
-  }
+  // @Post()
+  // create(@Body() createCartDto: CreateCartDto) {
+  //   return this.cartService.create(createCartDto);
+  // }
+
+  // @Get()
+  // findAll() {
+  //   return this.cartService.findAll();
+  // }
+
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.cartService.findOne(+id);
+  // }
+
+  // @Patch(':id')
+  // update(@Param('id') id: string, @Body() updateCartDto: UpdateCartDto) {
+  //   return this.cartService.update(+id, updateCartDto);
+  // }
+
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.cartService.remove(+id);
+  // }
 }

@@ -28,12 +28,12 @@ export class OrdersService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async create(userId: string, dto: CreateOrderDto): Promise<Order> {
-    if (!userId || userId === 'undefined') {
+  async create(userId: number, dto: CreateOrderDto): Promise<Order> {
+    if (!userId) {
       throw new BadRequestException('Invalid or missing user ID');
     }
 
-    const user = await this.userRepository.findOneBy({ id: String(userId) });
+    const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -92,7 +92,7 @@ export class OrdersService {
     });
   }
 
-  async findByUserId(userId: string): Promise<Order[]> {
+  async findByUserId(userId: number): Promise<Order[]> {
     return this.orderRepository.find({
       where: { user: { id: userId } },
       relations: ['items', 'items.product'],

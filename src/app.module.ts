@@ -56,7 +56,7 @@ import { CartModule } from './cart/cart.module';
         SlideImage,
         Address,
       ], // โหลด entity ที่เกี่ยวข้อง
-      synchronize: true, // ปิดการ sync เพราะตารางมีอยู่แล้ว
+      synchronize: false, // ปิดการ sync เพราะตารางมีอยู่แล้ว
       dropSchema: false, // ✅ เพิ่มบรรทัดนี้
     }),
     ConfigModule.forRoot({
