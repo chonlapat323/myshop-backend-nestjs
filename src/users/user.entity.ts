@@ -11,8 +11,8 @@ import {
 
 @Entity('users') // ชื่อตารางใน DB
 export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ nullable: true })
   first_name: string;

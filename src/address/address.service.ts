@@ -23,7 +23,7 @@ export class AddressService {
 
     private prisma: PrismaService,
   ) {}
-  async create(userId: string, dto: CreateAddressDto) {
+  async create(userId: number, dto: CreateAddressDto) {
     const address = this.addressRepo.create({ ...dto, user_id: userId });
 
     // ถ้า is_default == true ต้อง set default address อื่นเป็น false ก่อน
@@ -34,14 +34,14 @@ export class AddressService {
     return this.addressRepo.save(address);
   }
 
-  async findAll(userId: string) {
+  async findAll(userId: number) {
     return this.addressRepo.find({
       where: { user_id: userId },
       order: { is_default: 'DESC', created_at: 'DESC' },
     });
   }
 
-  async findOne(id: string, userId: string) {
+  async findOne(id: number, userId: number) {
     const address = await this.addressRepo.findOne({
       where: { id, user_id: userId },
     });
@@ -53,7 +53,7 @@ export class AddressService {
     return address;
   }
 
-  async update(id: string, userId: string, dto: UpdateAddressDto) {
+  async update(id: number, userId: number, dto: UpdateAddressDto) {
     const address = await this.findOne(id, userId);
 
     if (dto.is_default) {
@@ -65,7 +65,7 @@ export class AddressService {
     return this.addressRepo.save(address);
   }
 
-  async setDefault(addressId: string, userId: string): Promise<PrismaAddress> {
+  async setDefault(addressId: number, userId: number): Promise<PrismaAddress> {
     // ตรวจสอบว่า address นี้เป็นของผู้ใช้จริง
     const address = await this.prisma.addresses.findUnique({
       where: { id: addressId },
@@ -90,7 +90,7 @@ export class AddressService {
     return updated;
   }
 
-  async remove(id: string, userId: string): Promise<void> {
+  async remove(id: number, userId: number): Promise<void> {
     const address = await this.prisma.addresses.findUnique({
       where: { id },
     });

@@ -26,7 +26,7 @@ export class AdminsController {
   constructor(private readonly adminsService: AdminsService) {}
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<User> {
+  async findOne(@Param('id') id: number): Promise<User> {
     const admin = await this.adminsService.findById(id);
 
     if (!admin) {
@@ -121,7 +121,7 @@ export class AdminsController {
     if (file) {
       dto.avatar_url = `/uploads/users/${file.filename}`;
       // ✅ ลบรูปเก่า
-      const admin = await this.findOne(req.params.id);
+      const admin = await this.findOne(parseInt(req.params.id));
       const oldPath = admin.avatar_url
         ? path.join(__dirname, '..', '..', admin.avatar_url)
         : null;
@@ -130,7 +130,7 @@ export class AdminsController {
       }
     }
     try {
-      return this.adminsService.update(req.params.id, dto);
+      return this.adminsService.update(parseInt(req.params.id), dto);
     } catch (error) {
       // ❌ ถ้า save admin ไม่สำเร็จ → ลบไฟล์ออก
       if (file?.path) {
@@ -146,7 +146,7 @@ export class AdminsController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: number) {
     if (!id) {
       throw new NotFoundException('Invalid ID');
     }

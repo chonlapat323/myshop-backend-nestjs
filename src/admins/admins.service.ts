@@ -16,7 +16,7 @@ export class AdminsService {
     private readonly adminRepo: Repository<User>,
   ) {}
 
-  async findById(id: string): Promise<User | null> {
+  async findById(id: number): Promise<User | null> {
     return this.adminRepo.findOneBy({ id });
   }
 
@@ -32,7 +32,7 @@ export class AdminsService {
   }
 
   async update(
-    id: string,
+    id: number,
     dto: UpdateAdminDto,
     avatarFilename?: string,
   ): Promise<User> {
@@ -71,7 +71,7 @@ export class AdminsService {
     return this.adminRepo.find();
   }
 
-  async remove(id: string) {
+  async remove(id: number) {
     const admin = await this.adminRepo.findOne({ where: { id } });
 
     if (!admin) {

@@ -44,7 +44,7 @@ export class UserController {
   }
 
   @Get(':id')
-  async getUserById(@Param('id') id: string) {
+  async getUserById(@Param('id') id: number) {
     const member = await this.usersService.findUserById(id);
 
     if (!member || member.role_id !== '3') {
@@ -134,7 +134,7 @@ export class UserController {
     }),
   )
   async update(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Req() req: Request,
     @UploadedFile() avatar?: Express.Multer.File,
   ) {
@@ -202,7 +202,7 @@ export class UserController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: number) {
     if (!id) {
       throw new NotFoundException('Invalid ID');
     }

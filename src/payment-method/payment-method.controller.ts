@@ -31,13 +31,13 @@ export class PaymentMethodController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  findOne(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
     return this.service.findOne(id, user.userId);
   }
 
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body() dto: UpdatePaymentMethodDto,
     @CurrentUser() user: JwtPayload,
   ) {
@@ -46,12 +46,12 @@ export class PaymentMethodController {
 
   @Patch(':id/default')
   @UseGuards(JwtAuthGuard)
-  setDefault(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  setDefault(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
     return this.service.setDefault(id, user.userId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  remove(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
     return this.service.remove(id, user.userId);
   }
 }

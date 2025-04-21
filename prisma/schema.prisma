@@ -7,8 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model users {
+  id              Int             @id @default(autoincrement())
+  first_name      String?         @db.VarChar
+  last_name       String?         @db.VarChar
+  phone_number    String?         @db.VarChar
+  is_active       Boolean         @default(true)
+  avatar_url      String?         @db.VarChar
+  note            String?
+  email           String?         @unique
+  hashed_password String?         @db.VarChar
+  role_id         String?         @db.VarChar
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime        @default(now()) @db.Timestamptz(6)
+  last_login      DateTime?       @db.Timestamptz(6)
+  addresses       addresses[]
+  cart            cart[]
+  order           order[]
+  payment_method  PaymentMethod[]
+}
+
 model addresses {
-  id           String   @id(map: "PK_745d8f43d3af10ab8247465e450") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id           Int      @id @default(autoincrement())
   full_name    String   @db.VarChar
   address_line String   @db.VarChar
   city         String   @db.VarChar
@@ -16,10 +36,46 @@ model addresses {
   zip_code     String   @db.VarChar
   phone_number String   @db.VarChar
   is_default   Boolean  @default(false)
-  user_id      String   @db.Uuid
+  user_id      Int
   created_at   DateTime @default(now()) @db.Timestamp(6)
   updated_at   DateTime @default(now()) @updatedAt @db.Timestamp(6)
-  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_16aac8a9f6f9c1dd6bcb75ec023")
+  users        users    @relation(fields: [user_id], references: [id])
+}
+
+model order {
+  id                     Int      @id @default(autoincrement())
+  order_number           String   @unique(map: "UQ_f9180f384353c621e8d0c414c14") @db.VarChar
+  subtotal_price         Decimal  @db.Decimal
+  discount_value         Decimal  @default(0) @db.Decimal
+  coupon_code            String?  @db.VarChar
+  shipping_cost          Decimal  @default(0) @db.Decimal
+  total_price            Decimal
+  payment_method         String   @db.VarChar
+  status                 String   @default("pending") @db.VarChar
+  shipping_full_name     String   @db.VarChar
+  shipping_address_line1 String   @db.VarChar
+  shipping_address_line2 String?  @db.VarChar
+  shipping_city          String   @db.VarChar
+  shipping_zip           String   @db.VarChar
+  shipping_country       String   @db.VarChar
+  created_at             DateTime @default(now()) @db.Timestamp(6)
+  updated_at             DateTime @default(now()) @db.Timestamp(6)
+  userId                 Int
+  users                  users    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_caabe91507b3379c7ba73637b84")
+  order_items            order_items[]
+}
+
+model order_items {
+  id         Int      @id @default(autoincrement())
+  orderId    Int
+  productId  Int
+  product    products @relation(fields: [productId], references: [id])
+  order      order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product_name String @db.VarChar
+  price      Decimal  @db.Decimal(10, 2)
+  quantity   Int
+
+  @@map("order_items")
 }
 
 model category {
@@ -32,49 +88,6 @@ model category {
   created_at  DateTime   @default(now()) @db.Timestamptz(6)
   deleted_at  DateTime?  @db.Timestamp(6)
   products    products[]
-}
-
-model order {
-  id                     Int          @id(map: "PK_1031171c13130102495201e3e20") @default(autoincrement())
-  order_number           String       @unique(map: "UQ_f9180f384353c621e8d0c414c14") @db.VarChar
-  subtotal_price         Decimal      @db.Decimal
-  discount_value         Decimal      @default(0) @db.Decimal
-  coupon_code            String?      @db.VarChar
-  shipping_cost          Decimal      @default(0) @db.Decimal
-  total_price            Int
-  payment_method         String       @db.VarChar
-  status                 String       @default("pending") @db.VarChar
-  shipping_full_name     String       @db.VarChar
-  shipping_address_line1 String       @db.VarChar
-  shipping_address_line2 String?      @db.VarChar
-  shipping_city          String       @db.VarChar
-  shipping_zip           String       @db.VarChar
-  shipping_country       String       @db.VarChar
-  created_at             DateTime     @default(now()) @db.Timestamp(6)
-  updated_at             DateTime     @default(now()) @db.Timestamp(6)
-  userId                 String?      @db.Uuid
-  users                  users?       @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_caabe91507b3379c7ba73637b84")
-  order_item             order_item[]
-}
-
-model order_item {
-  id           Int       @id(map: "PK_d01158fe15b1ead5c26fd7f4e90") @default(autoincrement())
-  product_name String    @db.VarChar
-  price        Decimal   @db.Decimal(10, 2)
-  quantity     Int
-  orderId      Int?
-  productId    Int?
-  order        order?    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_646bf9ece6f45dbe41c203e06e0")
-  products     products? @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_904370c093ceea4369659a3c810")
-}
-
-model product_image {
-  id          Int      @id(map: "PK_99d98a80f57857d51b5f63c8240") @default(autoincrement())
-  url         String   @db.VarChar
-  is_main     Boolean  @default(false)
-  productId   Int
-  order_image Int
-  products    products @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_40ca0cd115ef1ff35351bed8da2")
 }
 
 model products {
@@ -95,11 +108,21 @@ model products {
   updated_at            DateTime             @default(now()) @db.Timestamp(6)
   deleted_at            DateTime?            @db.Timestamp(6)
   category_id           Int?
-  order_item            order_item[]
+  cart_item             cart_item[]
   product_image         product_image[]
   category              category?            @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "FK_9a5f6868c96e0069e699f33e124")
   products_tags_tags    products_tags_tags[]
   variants              variants[]
+  order_items           order_items[]
+}
+
+model product_image {
+  id          Int      @id(map: "PK_99d98a80f57857d51b5f63c8240") @default(autoincrement())
+  url         String   @db.VarChar
+  is_main     Boolean  @default(false)
+  productId   Int
+  order_image Int
+  products    products @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_40ca0cd115ef1ff35351bed8da2")
 }
 
 model products_tags_tags {
@@ -117,12 +140,12 @@ model slide_images {
   id          Int    @id(map: "PK_75744fd70f0d7fb5641c007cb29") @default(autoincrement())
   url         String @db.VarChar
   order_image Int    @default(0)
-  slide_id    String @db.Uuid
+  slide_id    Int
   slides      slides @relation(fields: [slide_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_1b789565cad8631f65aa608d6ca")
 }
 
 model slides {
-  id           String         @id(map: "PK_7907bb06ab78980c123912f7a7a") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id           Int            @id @default(autoincrement())
   title        String         @db.VarChar(255)
   description  String?
   order        Int            @default(0)
@@ -139,25 +162,6 @@ model tags {
   products_tags_tags products_tags_tags[]
 }
 
-model users {
-  id              String      @id(map: "PK_a3ffb1c0c8416b9fc6f907b7433") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  first_name      String?     @db.VarChar
-  last_name       String?     @db.VarChar
-  phone_number    String?     @db.VarChar
-  is_active       Boolean     @default(true)
-  avatar_url      String?     @db.VarChar
-  note            String?
-  email           String?     @unique(map: "UQ_97672ac88f789774dd47f7c8be3") @db.VarChar
-  hashed_password String?     @db.VarChar
-  role_id         String?     @db.VarChar
-  created_at      DateTime    @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime    @default(now()) @db.Timestamptz(6)
-  last_login      DateTime?   @db.Timestamptz(6)
-  addresses       addresses[]
-  order           order[]
-  payment_method  PaymentMethod[]
-}
-
 model variants {
   id        Int       @id(map: "PK_672d13d1a6de0197f20c6babb5e") @default(autoincrement())
   name      String    @db.VarChar
@@ -169,16 +173,40 @@ model variants {
 }
 
 model PaymentMethod {
-  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  user_id          String   @db.Uuid
-  cardholder_name  String   @db.VarChar
-  card_number      String   @db.VarChar
-  expiry_date      String   @db.VarChar
-  is_default       Boolean  @default(false)
-  created_at       DateTime @default(now()) @db.Timestamp(6)
-  updated_at       DateTime @default(now()) @updatedAt @db.Timestamp(6)
-
-  users users @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "FK_paymentmethod_user")
+  id              Int      @id @default(autoincrement())
+  user_id         Int
+  cardholder_name String   @db.VarChar
+  card_number     String   @db.VarChar
+  expiry_date     String   @db.VarChar
+  is_default      Boolean  @default(false)
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+  updated_at      DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  users           users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "FK_paymentmethod_user")
 
   @@map("payment_methods")
+}
+
+model cart {
+  id         Int         @id @default(autoincrement())
+  user_id    Int
+  created_at DateTime    @default(now()) @db.Timestamp(6)
+  updated_at DateTime    @default(now()) @updatedAt @db.Timestamp(6)
+  items      cart_item[]
+  users      users       @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "FK_cart_user")
+
+  @@map("carts")
+}
+
+model cart_item {
+  id             Int      @id @default(autoincrement())
+  cart_id        Int
+  product_id     Int
+  quantity       Int
+  price_snapshot Decimal  @db.Decimal(10, 2)
+  cart           cart     @relation(fields: [cart_id], references: [id], onDelete: Cascade, map: "FK_cartitem_cart")
+  products       products @relation(fields: [product_id], references: [id], onDelete: NoAction, map: "FK_cartitem_product")
+  created_at DateTime    @default(now()) @db.Timestamp(6)
+  updated_at DateTime    @default(now()) @updatedAt @db.Timestamp(6)
+  
+  @@map("cart_items")
 }
