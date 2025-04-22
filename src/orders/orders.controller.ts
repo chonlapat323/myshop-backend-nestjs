@@ -16,6 +16,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Order } from 'types/member/order';
+import { UserRole } from 'src/constants/user-role.enum';
 
 @UseGuards(AuthGuard('jwt'))
 @Controller('orders')
@@ -31,14 +32,25 @@ export class OrdersController {
   @Get()
   async findAll(@Req() req): Promise<Order[]> {
     const user = req.user;
-
-    // ถ้าเป็น admin ให้ดูทั้งหมด
-    // if (user.role === 'admin') {
-    //   return this.ordersService.findAll();
-    // }
+    if (user.role === UserRole.ADMIN) {
+      return this.ordersService.findAll();
+    }
 
     // ถ้าเป็น member ให้ดูแค่ของตัวเอง
     return this.ordersService.findByUserId(user.id);
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.findOne(id);
+  }
+
+  @Patch(':id')
+  async updateOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: UpdateOrderDto,
+  ) {
+    return this.ordersService.updateOrder(id, data);
   }
 
   @Patch(':id/cancel')

@@ -15,7 +15,9 @@ export type Order = {
   id: number;
   order_number: string;
   total_price: number;
-  status: string;
+  order_status: string;
   created_at?: string;
-  items: OrderItem[]; // ✅ เปลี่ยนชื่อให้สอดคล้องกับ frontend
+  tracking_number?: string | null;
+  user_name?: string | null;
+  items: OrderItem[];
 };
