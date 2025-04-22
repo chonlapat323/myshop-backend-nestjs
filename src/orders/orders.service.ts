@@ -8,11 +8,12 @@ import { DeepPartial, Like, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from 'src/products/entities/product.entity';
 import { User } from 'src/users/user.entity';
-import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderItem } from 'src/order-item/entities/order-item.entity';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { Order } from 'types/member/order';
+import { OrderStatus } from '@prisma/client';
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -119,7 +120,12 @@ export class OrdersService {
 
   async findByUserId(userId: number): Promise<Order[]> {
     const orders = await this.prisma.order.findMany({
-      where: { userId },
+      where: {
+        userId,
+        order_status: {
+          not: OrderStatus.cancelled,
+        },
+      },
       orderBy: { created_at: 'desc' },
       include: {
         order_items: {
@@ -158,7 +164,30 @@ export class OrdersService {
           })),
         },
       })),
+      tracking_number: order.tracking_number ?? null,
     }));
+  }
+
+  async cancelOrder(orderId: number, userId: number) {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        userId: userId,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.order_status === OrderStatus.cancelled) {
+      throw new BadRequestException('Order already cancelled');
+    }
+
+    return this.prisma.order.update({
+      where: { id: orderId },
+      data: { order_status: OrderStatus.cancelled },
+    });
   }
 
   // async findOne(id: number): Promise<Order> {

@@ -41,6 +41,11 @@ export class OrdersController {
     return this.ordersService.findByUserId(user.id);
   }
 
+  @Patch(':id/cancel')
+  async cancelOrder(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.ordersService.cancelOrder(id, req.user.id);
+  }
+
   // @Get(':id')
   // @UseGuards(AuthGuard('jwt'))
   // async findOne(@Req() req, @Param('id') id: number) {
