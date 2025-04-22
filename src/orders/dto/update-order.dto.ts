@@ -1,17 +1,16 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateOrderDto } from './create-order.dto';
 import { IsEnum, IsOptional, IsString, IsNumber } from 'class-validator';
-export enum OrderStatus {
-  PENDING = 'pending',
-  PAID = 'paid',
-  SHIPPED = 'shipped',
-  CANCELLED = 'cancelled',
-}
-export class UpdateOrderDto extends PartialType(CreateOrderDto) {
-  @IsOptional()
-  @IsEnum([OrderStatus])
-  status?: OrderStatus;
+import { OrderStatus } from '@prisma/client';
 
+export enum OrderStatusEnum {
+  pending = 'pending',
+  shipped = 'shipped',
+  delivered = 'delivered',
+  cancelled = 'cancelled',
+}
+
+export class UpdateOrderDto extends PartialType(CreateOrderDto) {
   @IsOptional()
   @IsString()
   paymentMethod?: string;
@@ -51,4 +50,11 @@ export class UpdateOrderDto extends PartialType(CreateOrderDto) {
   @IsOptional()
   @IsNumber()
   discountValue?: number;
+
+  @IsEnum(OrderStatus)
+  order_status: OrderStatus;
+
+  @IsOptional()
+  @IsString()
+  tracking_number?: string;
 }

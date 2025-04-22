@@ -63,7 +63,7 @@ model order {
   userId                 Int
   users                  users    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_caabe91507b3379c7ba73637b84")
   order_items            order_items[]
-  order_status OrderStatus @default(pending)
+  order_status           OrderStatus @default(pending)
   tracking_number        String?
 }
 

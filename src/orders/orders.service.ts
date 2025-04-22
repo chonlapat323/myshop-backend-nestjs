@@ -13,6 +13,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { Order } from 'types/member/order';
 import { OrderStatus } from '@prisma/client';
+import { UpdateOrderDto } from './dto/update-order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -111,12 +112,58 @@ export class OrdersService {
     return order;
   }
 
-  // findAll(): Promise<Order[]> {
-  //   return this.orderRepository.find({
-  //     relations: ['user', 'items', 'items.product'],
-  //     order: { created_at: 'DESC' },
-  //   });
-  // }
+  async findAll(): Promise<Order[]> {
+    const orders = await this.prisma.order.findMany({
+      orderBy: { created_at: 'desc' },
+      include: {
+        users: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+        order_items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                product_image: {
+                  where: { is_main: true },
+                  take: 1,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return orders.map((order) => ({
+      id: order.id,
+      email: order.users.email,
+      order_number: order.order_number,
+      total_price: Number(order.total_price),
+      order_status: order.order_status,
+      created_at: order.created_at.toISOString(),
+      tracking_number: order.tracking_number ?? null,
+      items: order.order_items.map((item) => ({
+        id: item.id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        price: Number(item.price),
+        product: {
+          product_image: item.product.product_image.map((img) => ({
+            id: img.id,
+            is_main: img.is_main,
+            url: img.url,
+            productId: img.productId,
+            order_image: img.order_image,
+          })),
+        },
+      })),
+    }));
+  }
 
   async findByUserId(userId: number): Promise<Order[]> {
     const orders = await this.prisma.order.findMany({
@@ -147,7 +194,7 @@ export class OrdersService {
       id: order.id,
       order_number: order.order_number,
       total_price: Number(order.total_price),
-      status: order.status,
+      order_status: order.order_status,
       created_at: order.created_at.toISOString(), // ✅ แปลงเป็น string
       items: order.order_items.map((item) => ({
         id: item.id,
@@ -166,6 +213,73 @@ export class OrdersService {
       })),
       tracking_number: order.tracking_number ?? null,
     }));
+  }
+
+  async findOne(id: number): Promise<Order> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: {
+        users: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+        order_items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                product_image: {
+                  where: { is_main: true },
+                  take: 1,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return {
+      id: order.id,
+      order_number: order.order_number,
+      total_price: Number(order.total_price),
+      order_status: order.order_status,
+      created_at: order.created_at.toISOString(),
+      tracking_number: order.tracking_number ?? undefined,
+      user_name: order.users?.email ?? null,
+      items: order.order_items.map((item) => ({
+        id: item.id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        price: Number(item.price),
+        product: {
+          product_image: item.product.product_image.map((img) => ({
+            id: img.id,
+            is_main: img.is_main,
+            url: img.url,
+            productId: img.productId,
+            order_image: img.order_image,
+          })),
+        },
+      })),
+    };
+  }
+
+  async updateOrder(id: number, data: UpdateOrderDto) {
+    return this.prisma.order.update({
+      where: { id },
+      data: {
+        order_status: data.order_status as any, // ✅ no error now
+        tracking_number: data.tracking_number ?? null,
+      },
+    });
   }
 
   async cancelOrder(orderId: number, userId: number) {
