@@ -38,5 +38,3 @@ export class CreateUserDto {
   @Transform(({ value }) => value === 'true' || value === 'on')
   is_active: boolean;
 }
-
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
