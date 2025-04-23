@@ -85,13 +85,28 @@ export class UsersService {
     });
   }
 
-  async update(id: number, dto: UpdateUserDto): Promise<PrismaUser> {
+  async update(
+    id: number,
+    dto: UpdateUserDto,
+    avatarFilename?: string,
+  ): Promise<PrismaUser> {
     const user = await this.prisma.users.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
+    const userData = pick(dto, [
+      'first_name',
+      'last_name',
+      'email',
+      'phone_number',
+      'note',
+      'is_active',
+    ]);
+    if (avatarFilename) {
+      userData.avatar_url = `/uploads/users/${avatarFilename}`;
+    }
 
     return this.prisma.users.update({
       where: { id },
-      data: dto,
+      data: userData,
     });
   }
 

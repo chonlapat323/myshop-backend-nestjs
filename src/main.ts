@@ -3,11 +3,11 @@ import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
 import { ArgumentsHost, ValidationPipe } from '@nestjs/common';
 import * as express from 'express';
-import { join } from 'path';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
   app.use(express.json()); // ✅ ใส่ให้แน่ใจว่ารับ JSON ได้
   app.use(express.urlencoded({ extended: true })); // สำหรับ form-urlencoded (optional)
   app.use(cookieParser());
@@ -26,19 +26,6 @@ async function bootstrap() {
       },
     },
     new HttpExceptionFilter(),
-  );
-  const staticFolders = ['products', 'users', 'categories', 'slides'];
-
-  for (const folder of staticFolders) {
-    app.use(
-      `/public/uploads/${folder}`,
-      express.static(join(__dirname, '..', `public/uploads/${folder}`)),
-    );
-  }
-
-  app.use(
-    '/public/temp-uploads',
-    express.static(join(__dirname, '..', 'public/temp-uploads')),
   );
 
   app.enableCors({

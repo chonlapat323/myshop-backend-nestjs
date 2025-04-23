@@ -1,23 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateSlideDto } from './dto/create-slide.dto';
 import { UpdateSlideDto } from './dto/update-slide.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Slide } from './entities/slide.entity';
-import { SlideImage } from './entities/slide-image.entity';
-import { Repository } from 'typeorm';
 import * as path from 'path';
 import * as fs from 'fs';
+import { moveTempSlideImage } from 'utils/file.util';
+
 @Injectable()
 export class SlidesService {
-  constructor(
-    @InjectRepository(Slide)
-    private readonly slideRepository: Repository<Slide>,
+  constructor(private readonly prisma: PrismaService) {}
 
-    @InjectRepository(SlideImage)
-    private readonly slideImageRepository: Repository<SlideImage>,
-  ) {}
-
-  // slides.service.ts
   async findAll(page = 1, limit = 10, isActive?: string) {
     const skip = (page - 1) * limit;
     const where: any = {};
@@ -26,13 +18,18 @@ export class SlidesService {
       where.is_active = isActive === 'true';
     }
 
-    const [slides, total] = await this.slideRepository.findAndCount({
-      where,
-      take: limit,
-      skip,
-      order: { created_at: 'DESC' },
-      relations: ['images'],
-    });
+    const [slides, total] = await this.prisma.$transaction([
+      this.prisma.slides.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: {
+          slide_images: true,
+        },
+      }),
+      this.prisma.slides.count({ where }),
+    ]);
 
     return {
       data: slides,
@@ -42,165 +39,124 @@ export class SlidesService {
     };
   }
 
-  async findOne(id: string): Promise<Slide> {
-    const slide = await this.slideRepository.findOne({ where: { id } });
-    if (!slide) {
-      throw new NotFoundException('Slide not found');
-    }
+  async findOne(id: number) {
+    const slide = await this.prisma.slides.findUnique({
+      where: { id },
+      include: { slide_images: true },
+    });
+
+    if (!slide) throw new NotFoundException('Slide not found');
     return slide;
   }
 
-  async findDefault(): Promise<Slide> {
-    const slide = await this.slideRepository.findOne({
+  async findDefault() {
+    const slide = await this.prisma.slides.findFirst({
       where: { is_default: true },
+      include: { slide_images: true },
     });
 
-    if (!slide) {
-      throw new NotFoundException('ไม่พบสไลด์ default');
-    }
-
+    if (!slide) throw new NotFoundException('ไม่พบสไลด์ default');
     return slide;
   }
 
   async create(dto: CreateSlideDto) {
     const { imageUrls = [], ...slideData } = dto;
-    const imageEntities: SlideImage[] = [];
 
     if (dto.is_default) {
-      await this.slideRepository
-        .createQueryBuilder()
-        .update()
-        .set({ is_default: false })
-        .execute();
-    }
-
-    for (const [index, img] of imageUrls.entries()) {
-      let finalUrl = img.url;
-
-      if (img.url.startsWith('/public/temp-uploads/')) {
-        const filename = img.url.split('/').pop();
-        if (!filename) continue;
-
-        const tempPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'public',
-          'temp-uploads',
-          filename,
-        );
-        const finalPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'public',
-          'uploads',
-          'slides',
-          filename,
-        );
-
-        if (fs.existsSync(tempPath)) {
-          fs.renameSync(tempPath, finalPath);
-          finalUrl = `/public/uploads/slides/${filename}`;
-        }
-      }
-
-      const image = this.slideRepository.manager.create(SlideImage, {
-        url: finalUrl,
-        order_image: index,
+      await this.prisma.slides.updateMany({
+        data: { is_default: false },
+        where: { is_default: true },
       });
-
-      imageEntities.push(image);
     }
 
-    const slide = this.slideRepository.create({
-      ...slideData,
-      images: imageEntities,
+    const slide = await this.prisma.slides.create({
+      data: {
+        ...slideData,
+      },
     });
 
-    return this.slideRepository.save(slide);
+    const finalImages = imageUrls.map((img, index) => ({
+      url: moveTempSlideImage(img.url),
+      order_image: index,
+      slide_id: slide.id,
+    }));
+
+    await this.prisma.slide_images.createMany({
+      data: finalImages as any, // safe cast due to filtering above
+    });
+
+    return this.findOne(slide.id);
   }
 
-  async update(id: string, dto: UpdateSlideDto) {
+  async update(id: number, dto: UpdateSlideDto) {
     const { imageUrls, ...rest } = dto;
-    const slide = await this.slideRepository.findOne({ where: { id } });
+
+    const slide = await this.prisma.slides.findUnique({ where: { id } });
     if (!slide) throw new NotFoundException('Slide not found');
 
     if (dto.is_default) {
-      await this.slideRepository
-        .createQueryBuilder()
-        .update()
-        .set({ is_default: false })
-        .where('is_default = true')
-        .execute();
+      await this.prisma.slides.updateMany({
+        data: { is_default: false },
+        where: { is_default: true },
+      });
     }
-    // 🔸 merge ข้อมูลอื่น ๆ เช่น title, description, is_active, is_default
-    Object.assign(slide, rest);
 
-    // ✅ บันทึกข้อมูล slide หลักก่อน
-    await this.slideRepository.save(slide);
+    await this.prisma.slides.update({
+      where: { id },
+      data: rest,
+    });
 
-    // 🔸 Sync image ถ้ามี
     if (imageUrls) {
-      await this.syncSlideImages(id, imageUrls);
+      const finalImages = imageUrls.map((img, index) => ({
+        id: img.id,
+        url: moveTempSlideImage(img.url),
+        order_image: index,
+        slide_id: id,
+      }));
+
+      await this.prisma.$transaction(
+        finalImages.map((img) =>
+          this.prisma.slide_images.upsert({
+            where: { id: img.id ?? 0 },
+            update: img,
+            create: img,
+          }),
+        ),
+      );
     }
 
     return this.findOne(id);
   }
 
-  private async syncSlideImages(
-    slideId: string,
-    images: { id?: number; url: string }[],
-  ) {
-    const finalImages: SlideImage[] = [];
-
-    for (const [index, img] of images.entries()) {
-      let finalUrl = img.url;
-
-      if (img.url.startsWith('/public/temp-uploads/')) {
-        const filename = img.url.split('/').pop();
-        if (!filename) continue;
-
-        const tempPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'public',
-          'temp-uploads',
-          filename,
-        );
-        const finalPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'public',
-          'uploads',
-          'slides',
-          filename,
-        );
-
-        if (fs.existsSync(tempPath)) {
-          fs.renameSync(tempPath, finalPath);
-          finalUrl = `/public/uploads/slides/${filename}`;
-        }
-      }
-
-      finalImages.push(
-        this.slideRepository.manager.create(SlideImage, {
-          id: img.id, // ถ้ามี id แสดงว่าเป็นรูปเดิม
-          url: finalUrl,
-          order_image: index,
-          slide_id: slideId,
-        }),
-      );
-    }
-
-    // 🔸 ลบรูปเก่าทิ้งทั้งหมดก่อน แล้วค่อย insert ใหม่ (ง่ายและปลอดภัยกว่า)
-    await this.slideImageRepository.delete({ slide_id: slideId });
-    await this.slideImageRepository.save(finalImages);
+  async remove(id: number) {
+    await this.prisma.slide_images.deleteMany({ where: { slide_id: id } });
+    await this.prisma.slides.delete({ where: { id } });
+    return { message: 'Slide deleted successfully' };
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} slide`;
+  async removeImage(id: number) {
+    const image = await this.prisma.slide_images.findUnique({ where: { id } });
+    if (!image) throw new NotFoundException('Image not found');
+
+    const filename = image.url.split('/').pop();
+    const filePath = path.join(
+      process.cwd(),
+      'public',
+      'uploads',
+      'slides',
+      filename!,
+    );
+
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (err) {
+      console.warn('⚠️ Failed to delete image file:', err.message);
+    }
+
+    await this.prisma.slide_images.delete({ where: { id } });
+
+    return { message: 'Image removed successfully' };
   }
 }

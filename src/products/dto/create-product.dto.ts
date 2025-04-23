@@ -25,6 +25,8 @@ class VariantDto {
   @IsString()
   name: string;
 
+  stock: number;
+
   @IsString()
   value: string;
 }

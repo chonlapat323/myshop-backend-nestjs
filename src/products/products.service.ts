@@ -1,62 +1,77 @@
 // src/products/products.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Product } from './entities/product.entity';
-import { Variant } from './entities/variant.entity';
-import { Tag } from './entities/tag.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   CreateProductDto,
   ImageUrlDto,
   UpdateProductDto,
 } from './dto/create-product.dto';
-import * as path from 'path';
-import * as fs from 'fs';
-import { ProductImage } from './entities/product-image.entity';
-// product.service.ts
-import { In } from 'typeorm';
-import { Category } from 'src/categories/entities/category.entity';
+import { Prisma } from '@prisma/client';
+import { moveTempProductImage } from 'utils/file.util';
+
 @Injectable()
 export class ProductsService {
-  constructor(
-    @InjectRepository(Product)
-    private readonly productRepo: Repository<Product>,
-    @InjectRepository(ProductImage)
-    private readonly productImageRepo: Repository<ProductImage>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   findAll() {
-    return this.productRepo.find({ relations: ['tags', 'variants', 'images'] });
+    return this.prisma.products.findMany({
+      include: {
+        product_image: true,
+        variants: true,
+        products_tags_tags: true,
+      },
+    });
   }
 
   findOne(id: number) {
-    return this.productRepo.findOne({
+    return this.prisma.products.findUnique({
       where: { id },
-      relations: ['tags', 'variants', 'images', 'category'],
-      withDeleted: true,
+      include: {
+        product_image: true,
+        variants: true,
+        products_tags_tags: true,
+        category: true,
+      },
     });
   }
 
   async findPaginated(limit: number, skip: number) {
-    const [data, total] = await this.productRepo.findAndCount({
-      relations: ['tags', 'variants', 'images'],
-      take: limit,
-      skip: skip,
-      order: { created_at: 'DESC' },
-    });
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.products.findMany({
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: {
+          product_image: true,
+          products_tags_tags: {
+            include: {
+              tags: true,
+            },
+          },
+        },
+      }),
+      this.prisma.products.count(),
+    ]);
+
+    const mapped = data.map((product) => ({
+      ...product,
+      tags: product.products_tags_tags.map((ptt) => ptt.tags),
+    }));
 
     return {
-      data,
+      data: mapped,
       total,
       page: skip / limit + 1,
       pageCount: Math.ceil(total / limit),
     };
   }
 
-  async findBestSellers(): Promise<Product[]> {
-    return this.productRepo.find({
+  async findBestSellers() {
+    return this.prisma.products.findMany({
       where: { is_best_seller: true },
-      order: { updated_at: 'DESC' },
+      orderBy: { updated_at: 'desc' },
       take: 4,
     });
   }
@@ -65,271 +80,203 @@ export class ProductsService {
     slug: string,
     search?: string,
     sort?: 'lowest' | 'highest',
-  ): Promise<Product[]> {
-    let query = this.productRepo
-      .createQueryBuilder('product')
-      .leftJoinAndSelect('product.images', 'image')
-      .leftJoinAndSelect('product.category', 'category')
-      .where('category.link = :link', { link: slug })
-      .andWhere('product.is_active = :active', { active: true });
-
-    if (search) {
-      query = query.andWhere('product.name ILIKE :search', {
-        search: `%${search}%`,
-      });
-    }
-
-    if (sort === 'lowest') {
-      query = query.orderBy('product.price', 'ASC');
-    } else if (sort === 'highest') {
-      query = query.orderBy('product.price', 'DESC');
-    }
-
-    return query.getMany();
+  ) {
+    return this.prisma.products.findMany({
+      where: {
+        category: {
+          link: slug,
+        },
+        is_active: true,
+        name: search ? { contains: search, mode: 'insensitive' } : undefined,
+      },
+      orderBy:
+        sort === 'lowest'
+          ? { price: 'asc' }
+          : sort === 'highest'
+            ? { price: 'desc' }
+            : undefined,
+      include: { product_image: true },
+    });
   }
 
   async create(dto: CreateProductDto) {
     const { tags, variants, imageUrls = [], ...productData } = dto;
-    const category = await this.productRepo.manager.findOne(Category, {
-      where: { id: dto.category_id },
+
+    const tagUpserts =
+      tags?.map((name) =>
+        this.prisma.tags.upsert({
+          where: { name },
+          update: {},
+          create: { name },
+        }),
+      ) || [];
+
+    const createdTags = await this.prisma.$transaction(tagUpserts);
+
+    const finalImages = imageUrls.map((url, i) => ({
+      url: moveTempProductImage(url.url),
+      is_main: i === 0,
+      order_image: i,
+    }));
+
+    return this.prisma.products.create({
+      data: {
+        ...productData,
+        product_image: { create: finalImages },
+        variants: { create: variants ?? [] },
+        products_tags_tags: {
+          create: createdTags.map((tag) => ({ tagsId: tag.id })),
+        },
+      },
     });
-
-    if (!category) {
-      throw new NotFoundException('Category not found');
-    }
-
-    // ✅ เตรียม tagEntities
-    const tagEntities: Tag[] = [];
-    if (tags && tags.length > 0) {
-      for (const tagName of tags) {
-        let tag = await this.productRepo.manager.findOne(Tag, {
-          where: { name: tagName },
-        });
-
-        if (!tag) {
-          tag = this.productRepo.manager.create(Tag, { name: tagName });
-          await this.productRepo.manager.save(tag);
-        }
-
-        tagEntities.push(tag);
-      }
-    }
-
-    // ✅ เตรียม variantEntities
-    const variantEntities: Variant[] = [];
-    if (variants && variants.length > 0) {
-      for (const variant of variants) {
-        variantEntities.push(this.productRepo.manager.create(Variant, variant));
-      }
-    }
-
-    // ✅ เตรียม imageEntities
-    const imageEntities: ProductImage[] = [];
-    // 🔍 ย้ายไฟล์จาก temp → uploads และเปลี่ยน path ให้ถูกต้อง
-    for (const [index, url] of imageUrls.entries()) {
-      let finalUrl = url.url;
-
-      if (url.url.startsWith('/public/temp-uploads/')) {
-        const filename = url.url.split('/').pop();
-        if (!filename) continue;
-
-        const tempPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'public',
-          'temp-uploads',
-          filename,
-        );
-        const finalPath = path.join(
-          __dirname,
-          '..',
-          '..',
-          'public',
-          'uploads',
-          'products',
-          filename,
-        );
-
-        if (fs.existsSync(tempPath)) {
-          fs.renameSync(tempPath, finalPath);
-          finalUrl = `/public/uploads/products/${filename}`; // ✅ ต้องใช้ path นี้เท่านั้น
-        }
-      }
-
-      const image = this.productRepo.manager.create(ProductImage, {
-        url: finalUrl, // ✅ เก็บ path ที่ถูกต้อง
-        is_main: index === 0,
-        order_image: index, // ✅ เพิ่มตรงนี้
-      });
-      imageEntities.push(image);
-    }
-
-    // ✅ สร้าง Product entity
-    const product = this.productRepo.create({
-      ...productData,
-      images: imageEntities,
-      tags: tagEntities,
-      variants: variantEntities,
-      category, // ✅ ใส่ category ที่ดึงมา
-    });
-
-    return this.productRepo.save(product);
   }
 
   async update(id: number, dto: UpdateProductDto) {
-    const { variants, imageUrls, tags, category_id, ...rest } = dto;
-
-    const product = await this.productRepo.findOne({ where: { id } });
+    const product = await this.prisma.products.findUnique({ where: { id } });
     if (!product) throw new NotFoundException('Product not found');
 
-    // 🔸 กำหนด category ใหม่
-    if (category_id) {
-      const category = await this.productRepo.manager.findOne(Category, {
-        where: { id: category_id },
-      });
-      if (!category) throw new NotFoundException('Category not found');
-      product.category = category;
-    } else {
-      product.category = null;
-    }
+    const { variants, imageUrls, tags, ...rest } = dto;
 
-    // 🔸 merge ข้อมูลอื่น ๆ
-    Object.assign(product, rest);
+    const finalImages = imageUrls!.map((img, i) => ({
+      id: img.id,
+      url: moveTempProductImage(img.url),
+      productId: id,
+      order_image: i,
+      is_main: i === 0,
+    }));
 
-    // ✅ บันทึกข้อมูล
-    await this.productRepo.save(product);
+    const updateData: any = {
+      ...rest,
+      category_id: dto.category_id ?? null,
+    };
 
-    // 🔸 Sync image ถ้ามี
-    if (imageUrls) {
-      await this.syncImages(id, imageUrls);
-    }
+    // update product main info
+    await this.prisma.products.update({
+      where: { id },
+      data: updateData,
+    });
 
-    return this.findOne(id);
+    // upsert product_image
+    await this.prisma.$transaction(
+      finalImages.map((img) =>
+        this.prisma.product_image.upsert({
+          where: { id: img.id ?? 0 }, // fallback to id: 0 if new
+          update: img,
+          create: img,
+        }),
+      ),
+    );
+
+    return this.prisma.products.findUnique({
+      where: { id },
+      include: { product_image: true },
+    });
   }
 
   async remove(id: number) {
-    const product = await this.productRepo.findOne({
+    const product = await this.prisma.products.findUnique({
       where: { id },
-      relations: ['images'], // ✅ ต้องดึงรูปมาด้วย
+      include: { product_image: true },
     });
-
     if (!product) throw new NotFoundException('Product not found');
 
-    // ✅ ลบรูปจาก filesystem
-    for (const img of product.images) {
-      const filename = img.url.split('/').pop(); // /uploads/xxxx.jpg → xxxx.jpg
+    for (const img of product.product_image) {
+      const filename = img.url.split('/').pop();
       const filePath = path.join(
-        __dirname,
-        '..',
-        '..',
+        process.cwd(),
         'public',
         'uploads',
         'products',
         filename!,
       );
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
-    // ✅ ลบจาก DB
-    return await this.productRepo.update(id, { deleted_at: new Date() });
+    return this.prisma.products.update({
+      where: { id },
+      data: { deleted_at: new Date() },
+    });
   }
 
   async removeImage(id: number) {
-    const image = await this.productRepo.manager.findOne(ProductImage, {
-      where: { id },
-    });
+    const image = await this.prisma.product_image.findUnique({ where: { id } });
+    if (!image) throw new NotFoundException('Image not found');
 
-    if (!image) {
-      throw new NotFoundException('Image not found');
-    }
-    const productId = image.productId;
-    const wasMain = image.is_main;
     const filename = image.url.split('/').pop();
-    const imagePath = path.join(
-      __dirname,
-      '..',
-      '..',
+    const filePath = path.join(
+      process.cwd(),
       'public',
       'uploads',
       'products',
       filename!,
     );
-    if (fs.existsSync(imagePath)) {
-      fs.unlinkSync(imagePath);
-    } else {
-      console.log('error path');
-    }
-    await this.productRepo.manager.remove(ProductImage, image);
-    const result: any = {
-      success: true,
-      message: 'Image removed successfully',
-      newMainImage: null,
-    };
 
-    if (wasMain) {
-      const remainingImages = await this.productImageRepo.find({
-        where: { productId },
-        order: { order_image: 'ASC' },
-      });
-      for (let i = 0; i < remainingImages.length; i++) {
-        remainingImages[i].order_image = i;
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
       }
-      if (remainingImages.length > 0) {
-        remainingImages[0].is_main = true;
-
-        await this.productImageRepo.save(remainingImages[0]);
-        // result.newMainImage = promoted;
-      }
+    } catch (err) {
+      console.warn('⚠️ Failed to delete image file:', err.message);
+      // ไม่โยน error เพราะไฟล์หายไม่ถือเป็น failure ใหญ่
     }
 
-    return result;
+    await this.prisma.product_image.delete({ where: { id } });
+
+    return { message: 'Image removed successfully' };
   }
 
   async syncImages(productId: number, imageUrls: ImageUrlDto[]) {
-    const existingImages = await this.productImageRepo.find({
+    const existingImages = await this.prisma.product_image.findMany({
       where: { productId },
     });
-
     const existingMap = new Map(existingImages.map((img) => [img.url, img]));
-
     const incomingUrls = imageUrls.map((img) => img.url);
 
-    // 🔥 ลบรูปที่ไม่มีในรายการใหม่
     const toDelete = existingImages.filter(
       (img) => !incomingUrls.includes(img.url),
     );
-    if (toDelete.length > 0) {
-      await this.productImageRepo.delete({
-        id: In(toDelete.map((img) => img.id)),
-      });
-    }
+    await this.prisma.product_image.deleteMany({
+      where: { id: { in: toDelete.map((img) => img.id) } },
+    });
 
-    // ➕ เพิ่ม/อัปเดตรูปใหม่ + อัปเดตลำดับและ main
-    const imagesToSave: ProductImage[] = [];
+    const imagesToSave = imageUrls.map((img, i) => {
+      const existing = existingMap.get(img.url);
+      return existing
+        ? { ...existing, order_image: i, is_main: i === 0 }
+        : { url: img.url, productId, order_image: i, is_main: i === 0 };
+    });
 
-    for (let i = 0; i < imageUrls.length; i++) {
-      const { url } = imageUrls[i];
-      const existing = existingMap.get(url);
-      if (existing) {
-        existing.order_image = i;
-        existing.is_main = i === 0;
-        imagesToSave.push(existing);
-      } else {
-        imagesToSave.push(
-          this.productImageRepo.create({
-            url,
-            productId,
-            order_image: i,
-            is_main: i === 0,
-          }),
-        );
-      }
-    }
-
-    await this.productImageRepo.save(imagesToSave);
+    await this.prisma.$transaction(
+      imagesToSave.map((img) => {
+        if ('id' in img && typeof img.id === 'number') {
+          // มี id → upsert
+          return this.prisma.product_image.upsert({
+            where: { id: img.id },
+            update: {
+              url: img.url,
+              productId: img.productId,
+              order_image: img.order_image,
+              is_main: img.is_main,
+            },
+            create: {
+              url: img.url,
+              productId: img.productId,
+              order_image: img.order_image,
+              is_main: img.is_main,
+            },
+          });
+        } else {
+          // ไม่มี id → สร้างใหม่
+          return this.prisma.product_image.create({
+            data: {
+              url: img.url,
+              productId: img.productId,
+              order_image: img.order_image,
+              is_main: img.is_main,
+            },
+          });
+        }
+      }),
+    );
   }
 }
