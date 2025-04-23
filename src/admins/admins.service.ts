@@ -1,34 +1,40 @@
-// src/admins/admins.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { CreateAdminDto, UpdateAdminDto } from './admins.dto';
+import { CreateAdminDto } from './dto/create-admins.dto';
+import { UpdateAdminDto } from './dto/update-admins.dto';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
-import { User } from 'src/users/user.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { pick } from 'src/common/utils/clean-dto.util';
+import { users as User } from '@prisma/client';
+import { UserRole } from 'src/constants/user-role.enum';
 
 @Injectable()
 export class AdminsService {
-  constructor(
-    @InjectRepository(User)
-    private readonly adminRepo: Repository<User>,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async findById(id: number): Promise<User | null> {
-    return this.adminRepo.findOneBy({ id });
+    return this.prisma.users.findUnique({ where: { id } });
+  }
+
+  async findAll(): Promise<User[]> {
+    return this.prisma.users.findMany({
+      where: { role_id: UserRole.ADMIN }, // สมมุติ admin คือ role_id = 1
+    });
   }
 
   async create(dto: CreateAdminDto, avatarUrl?: string) {
+    const { password, confirm_password, ...safeData } = dto;
     const hashedPassword = await bcrypt.hash(dto.password!, 10);
-    const newAdmin = this.adminRepo.create({
-      ...dto,
-      hashed_password: hashedPassword,
-      avatar_url: avatarUrl ?? '', // ✅ string หรือ null
-    });
 
-    return this.adminRepo.save(newAdmin);
+    const data = {
+      ...safeData,
+      hashed_password: hashedPassword,
+      avatar_url: avatarUrl ?? null,
+      role_id: UserRole.ADMIN, // สมมุติ admin
+    };
+
+    return this.prisma.users.create({ data });
   }
 
   async update(
@@ -36,7 +42,7 @@ export class AdminsService {
     dto: UpdateAdminDto,
     avatarFilename?: string,
   ): Promise<User> {
-    const admin = await this.adminRepo.findOneBy({ id });
+    const admin = await this.findById(id);
     if (!admin) {
       throw new NotFoundException(`Admin with ID ${id} not found`);
     }
@@ -45,12 +51,7 @@ export class AdminsService {
       dto.hashed_password = await bcrypt.hash(dto.password, 10);
     }
 
-    // ✅ ถ้ามีการอัปโหลด avatar ใหม่
-    if (avatarFilename) {
-      dto.avatar_url = `/uploads/${avatarFilename}`;
-    }
-
-    const updateData = pick(dto, [
+    const data = pick(dto, [
       'first_name',
       'last_name',
       'email',
@@ -59,44 +60,34 @@ export class AdminsService {
       'phone_number',
       'is_active',
       'note',
-      'avatar_url',
     ]);
 
-    await this.adminRepo.update(id, updateData);
+    if (avatarFilename) {
+      data.avatar_url = `/uploads/users/${avatarFilename}`;
+    }
 
-    return this.adminRepo.findOneByOrFail({ id });
-  }
-
-  async findAll() {
-    return this.adminRepo.find();
+    return this.prisma.users.update({
+      where: { id },
+      data,
+    });
   }
 
   async remove(id: number) {
-    const admin = await this.adminRepo.findOne({ where: { id } });
-
+    const admin = await this.findById(id);
     if (!admin) {
       throw new NotFoundException(`Admin with ID ${id} not found`);
     }
 
-    // ลบไฟล์ avatar ถ้ามี
     if (admin.avatar_url) {
-      const filePath = path.join(
-        __dirname,
-        '..',
-        '..',
-        'public',
-        admin.avatar_url,
-      );
+      const filePath = path.join(process.cwd(), 'public', admin.avatar_url);
       fs.unlink(filePath, (err) => {
         if (err) {
           console.error('❌ Failed to delete avatar:', err.message);
-        } else {
-          console.log('🗑️ Avatar deleted:', filePath);
         }
       });
     }
 
-    await this.adminRepo.delete(id);
+    await this.prisma.users.delete({ where: { id } });
     return { message: 'Admin deleted successfully' };
   }
 }

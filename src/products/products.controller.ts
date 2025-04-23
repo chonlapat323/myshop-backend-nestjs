@@ -20,7 +20,7 @@ import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-
+import * as path from 'path';
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productService: ProductsService) {}
@@ -50,12 +50,16 @@ export class ProductsController {
     return this.productService.findOne(id);
   }
 
-  // ✅ อัปโหลดไฟล์แบบชั่วคราว
   @Post('upload-multiple')
   @UseInterceptors(
     FilesInterceptor('files', 4, {
       storage: diskStorage({
-        destination: './public/temp-uploads',
+        destination: path.join(
+          process.cwd(),
+          'public',
+          'uploads',
+          'temp-uploads',
+        ),
         filename: (req, file, callback) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -70,7 +74,7 @@ export class ProductsController {
       throw new BadRequestException('No files uploaded');
     }
 
-    const urls = files.map((file) => `/public/temp-uploads/${file.filename}`);
+    const urls = files.map((file) => `/uploads/temp-uploads/${file.filename}`);
     return {
       message: 'Uploaded successfully',
       urls,

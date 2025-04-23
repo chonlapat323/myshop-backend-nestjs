@@ -9,8 +9,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CartService } from './cart.service';
-import { CreateCartDto } from './dto/create-cart.dto';
-import { UpdateCartDto } from './dto/update-cart.dto';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'src/auth/type/jwt-payload.interface';
@@ -53,29 +51,4 @@ export class CartController {
   removeCartItem(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
     return this.cartService.removeCartItem(id, user.userId);
   }
-
-  // @Post()
-  // create(@Body() createCartDto: CreateCartDto) {
-  //   return this.cartService.create(createCartDto);
-  // }
-
-  // @Get()
-  // findAll() {
-  //   return this.cartService.findAll();
-  // }
-
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.cartService.findOne(+id);
-  // }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateCartDto: UpdateCartDto) {
-  //   return this.cartService.update(+id, updateCartDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.cartService.remove(+id);
-  // }
 }

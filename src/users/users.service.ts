@@ -3,44 +3,35 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './user.entity';
-import { CreateUserDto, UpdateUserDto } from './user.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import { pick } from 'src/common/utils/clean-dto.util';
-import { UserRole } from 'src/constants/user-role.enum';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { users as PrismaUser } from '@prisma/client';
+import { UserRole, UserRoleMap } from 'src/constants/user-role.enum';
 import * as path from 'path';
 import * as fs from 'fs';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User)
-    private usersRepository: Repository<User>,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async findUsers({ role, page }: { role?: string; page: number }) {
     const take = 10;
     const skip = (page - 1) * take;
 
-    const where: any = {};
+    const where = role ? { role_id: String(UserRoleMap[role]) } : {};
 
-    if (role) {
-      const roleMap = {
-        member: '3',
-        admin: '1',
-        supervisor: '2',
-      };
-      where.role_id = roleMap[role];
-    }
-
-    const [items, count] = await this.usersRepository.findAndCount({
-      where,
-      take,
-      skip,
-      order: { created_at: 'DESC' },
-    });
+    const [items, count] = await this.prisma.$transaction([
+      this.prisma.users.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { created_at: 'desc' },
+      }),
+      this.prisma.users.count({ where }),
+    ]);
 
     return {
       items,
@@ -48,39 +39,33 @@ export class UsersService {
     };
   }
 
-  async findByEmail(email: string): Promise<User | undefined | null> {
-    return this.usersRepository.findOne({ where: { email } });
+  async findByEmail(email: string): Promise<PrismaUser | null> {
+    return this.prisma.users.findUnique({ where: { email } });
   }
 
-  async findUserById(id: number) {
-    const member = await this.usersRepository.findOne({ where: { id } });
-
-    if (!member) {
-      throw new NotFoundException('ไม่พบผู้ใช้นี้ในระบบ');
-    }
-
-    return member;
+  async findUserById(id: number): Promise<PrismaUser> {
+    const user = await this.prisma.users.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('ไม่พบผู้ใช้นี้ในระบบ');
+    return user;
   }
 
-  async findByRoles(roleIds: string[]): Promise<User[]> {
-    return this.usersRepository.find({
-      where: roleIds.map((id) => ({ role_id: id })),
-      order: { created_at: 'DESC' },
+  async findByRoles(roleIds: string[]): Promise<PrismaUser[]> {
+    return this.prisma.users.findMany({
+      where: { role_id: { in: roleIds } },
+      orderBy: { created_at: 'desc' },
     });
   }
 
-  async create(dto: CreateUserDto, avatarUrl?: string): Promise<User> {
-    const exitsting = await this.usersRepository.findOne({
+  async create(dto: CreateUserDto, avatarUrl?: string): Promise<PrismaUser> {
+    const existing = await this.prisma.users.findUnique({
       where: { email: dto.email },
     });
 
-    if (exitsting) {
+    if (existing) {
       throw new ConflictException('Email นี้ถูกใช้งานแล้ว');
     }
 
-    console.log(dto.password);
     const hashed = await bcrypt.hash(dto.password, 10);
-
     const userData = pick(dto, [
       'first_name',
       'last_name',
@@ -89,54 +74,63 @@ export class UsersService {
       'note',
       'is_active',
     ]);
-    const user = this.usersRepository.create({
-      ...userData,
-      hashed_password: hashed,
-      avatar_url: avatarUrl,
-      role_id: UserRole.MEMBER,
-    });
 
-    return await this.usersRepository.save(user);
+    return this.prisma.users.create({
+      data: {
+        ...userData,
+        hashed_password: hashed,
+        avatar_url: avatarUrl,
+        role_id: UserRole.MEMBER,
+      },
+    });
   }
 
-  async update(id: number, dto: UpdateUserDto) {
-    const user = await this.usersRepository.findOne({ where: { id } });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
+  async update(
+    id: number,
+    dto: UpdateUserDto,
+    avatarFilename?: string,
+  ): Promise<PrismaUser> {
+    const user = await this.prisma.users.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    const userData = pick(dto, [
+      'first_name',
+      'last_name',
+      'email',
+      'phone_number',
+      'note',
+      'is_active',
+    ]);
+    if (avatarFilename) {
+      userData.avatar_url = `/uploads/users/${avatarFilename}`;
     }
 
-    Object.assign(user, dto); // ✅ merge dto เข้า user
-    return this.usersRepository.save(user);
+    return this.prisma.users.update({
+      where: { id },
+      data: userData,
+    });
   }
 
   async remove(id: number) {
-    const admin = await this.usersRepository.findOne({ where: { id } });
+    const user = await this.prisma.users.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
 
-    if (!admin) {
-      throw new NotFoundException(`Admin with ID ${id} not found`);
-    }
-
-    // ลบไฟล์ avatar ถ้ามี
-    if (admin.avatar_url) {
+    if (user.avatar_url) {
       const filePath = path.join(
         __dirname,
         '..',
         '..',
         'public',
         'users',
-        admin.avatar_url,
+        user.avatar_url,
       );
       fs.unlink(filePath, (err) => {
-        if (err) {
-          console.error('❌ Failed to delete avatar:', err.message);
-        } else {
-          console.log('🗑️ Avatar deleted:', filePath);
-        }
+        if (err) console.error('❌ Failed to delete avatar:', err.message);
+        else console.log('🗑️ Avatar deleted:', filePath);
       });
     }
 
-    await this.usersRepository.delete(id);
-    return { message: 'Admin deleted successfully' };
+    await this.prisma.users.delete({ where: { id } });
+
+    return { message: 'User deleted successfully' };
   }
 }

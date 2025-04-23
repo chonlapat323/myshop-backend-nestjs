@@ -51,9 +51,7 @@ export class CategoriesController {
     FileInterceptor('image', {
       storage: diskStorage({
         destination: path.join(
-          __dirname,
-          '..',
-          '..',
+          process.cwd(),
           'public',
           'uploads',
           'categories',
@@ -71,9 +69,7 @@ export class CategoriesController {
     @Body() createCategoryDto: CreateCategoryDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const imagePath = file
-      ? `/public/uploads/categories/${file.filename}`
-      : undefined;
+    const imagePath = file ? `/uploads/categories/${file.filename}` : undefined;
 
     try {
       const newCategory = await this.categoriesService.create(
@@ -96,15 +92,21 @@ export class CategoriesController {
   }
 
   // PATCH หรือ POST method แล้วแต่คุณเลือกใช้ (ในตัวอย่างใช้ POST)
-  @Post(':id/update') // หรือใช้ @Post(':id/update') ก็ได้
+  @Post(':id/update')
   @UseInterceptors(
     FileInterceptor('image', {
       storage: diskStorage({
-        destination: './public/uploads/categories',
+        destination: path.join(
+          process.cwd(),
+          'public',
+          'uploads',
+          'categories',
+        ),
         filename: (req, file, cb) => {
-          const uniqueSuffix = `image-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = path.extname(file.originalname);
-          cb(null, `${uniqueSuffix}${ext}`);
+          cb(null, `image-${uniqueSuffix}${ext}`);
         },
       }),
     }),
@@ -114,7 +116,9 @@ export class CategoriesController {
     @Body() body: UpdateCategoryDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    const imagePath = file ? `/uploads/categories/${file.filename}` : undefined;
+    const imagePath = file
+      ? `/uploads/categories/${file.filename}` // ✅ path สำหรับ frontend
+      : undefined;
 
     try {
       const updatedCategory = await this.categoriesService.update(
@@ -127,10 +131,9 @@ export class CategoriesController {
         category: updatedCategory,
       };
     } catch (error) {
-      // ถ้าอัปโหลดภาพแล้วเกิด error ต้องลบภาพทิ้ง
-      if (file?.path) {
-        const fullPath = path.resolve(file.path);
-        fs.unlink(fullPath, (err) => {
+      // ✅ ถ้าอัปโหลดแล้ว error → ลบไฟล์
+      if (file?.path && fs.existsSync(file.path)) {
+        fs.unlink(file.path, (err) => {
           if (err) console.error('❌ Failed to remove uploaded file:', err);
         });
       }

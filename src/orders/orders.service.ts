@@ -4,31 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { DeepPartial, Like, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Product } from 'src/products/entities/product.entity';
-import { User } from 'src/users/user.entity';
-import { OrderItem } from 'src/order-item/entities/order-item.entity';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, OrderStatus } from '@prisma/client';
 import { Order } from 'types/member/order';
-import { OrderStatus } from '@prisma/client';
 import { UpdateOrderDto } from './dto/update-order.dto';
 
 @Injectable()
 export class OrdersService {
-  constructor(
-    @InjectRepository(OrderItem)
-    private readonly orderItemRepository: Repository<OrderItem>,
-
-    @InjectRepository(Product)
-    private readonly productRepository: Repository<Product>,
-
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-
-    private prisma: PrismaService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async create(userId: number, dto: CreateOrderDto) {
     const user = await this.prisma.users.findUnique({ where: { id: userId } });
@@ -40,7 +23,6 @@ export class OrdersService {
 
     const orderNumber = await this.generateOrderNumber();
 
-    // คำนวณราคาจาก product snapshot
     const orderItems = dto.items.map((item) => {
       const product = products.find((p) => p.id === item.productId);
       if (!product)
@@ -53,7 +35,7 @@ export class OrdersService {
         productId: product.id,
         product_name: product.name,
         quantity: item.quantity,
-        price: price,
+        price,
       };
     });
 
@@ -65,10 +47,9 @@ export class OrdersService {
     const shipping = dto.shippingCost || 0;
     const total = subtotal - discount + shipping;
 
-    // สร้าง order
     const order = await this.prisma.order.create({
       data: {
-        userId: userId,
+        userId,
         order_number: orderNumber,
         subtotal_price: subtotal,
         discount_value: discount,
@@ -86,12 +67,10 @@ export class OrdersService {
       },
     });
 
-    // สร้าง order_items
     await this.prisma.order_items.createMany({
       data: orderItems.map((item) => ({
         ...item,
-        orderId: order.id, // ✅ แก้จาก order_id
-        productId: item.productId, // ✅ แก้จาก product_id
+        orderId: order.id,
       })),
     });
 
@@ -100,13 +79,8 @@ export class OrdersService {
     });
 
     if (cart) {
-      await this.prisma.cart_item.deleteMany({
-        where: { cart_id: cart.id },
-      });
-
-      await this.prisma.cart.delete({
-        where: { id: cart.id },
-      });
+      await this.prisma.cart_item.deleteMany({ where: { cart_id: cart.id } });
+      await this.prisma.cart.delete({ where: { id: cart.id } });
     }
 
     return order;
@@ -116,12 +90,7 @@ export class OrdersService {
     const orders = await this.prisma.order.findMany({
       orderBy: { created_at: 'desc' },
       include: {
-        users: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
+        users: { select: { id: true, email: true } },
         order_items: {
           include: {
             product: {
@@ -195,7 +164,7 @@ export class OrdersService {
       order_number: order.order_number,
       total_price: Number(order.total_price),
       order_status: order.order_status,
-      created_at: order.created_at.toISOString(), // ✅ แปลงเป็น string
+      created_at: order.created_at.toISOString(),
       items: order.order_items.map((item) => ({
         id: item.id,
         product_name: item.product_name,
@@ -219,12 +188,7 @@ export class OrdersService {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: {
-        users: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
+        users: { select: { id: true, email: true } },
         order_items: {
           include: {
             product: {
@@ -276,7 +240,7 @@ export class OrdersService {
     return this.prisma.order.update({
       where: { id },
       data: {
-        order_status: data.order_status as any, // ✅ no error now
+        order_status: data.order_status,
         tracking_number: data.tracking_number ?? null,
       },
     });
@@ -284,10 +248,7 @@ export class OrdersService {
 
   async cancelOrder(orderId: number, userId: number) {
     const order = await this.prisma.order.findFirst({
-      where: {
-        id: orderId,
-        userId: userId,
-      },
+      where: { id: orderId, userId },
     });
 
     if (!order) {
@@ -304,49 +265,14 @@ export class OrdersService {
     });
   }
 
-  // async findOne(id: number): Promise<Order> {
-  //   const order = await this.orderRepository.findOne({
-  //     where: { id },
-  //     relations: ['user', 'items', 'items.product'],
-  //   });
-  //   if (!order) throw new NotFoundException('Order not found');
-  //   return order;
-  // }
-
-  // async update(id: number, dto: UpdateOrderDto): Promise<Order> {
-  //   const order = await this.orderRepository.findOneBy({ id });
-  //   if (!order) {
-  //     throw new NotFoundException('Order not found');
-  //   }
-
-  //   if (dto.status) {
-  //     order.status = dto.status;
-  //   }
-
-  //   return await this.orderRepository.save(order);
-  // }
-
-  // async remove(id: number): Promise<void> {
-  //   const order = await this.findOne(id);
-  //   await this.orderRepository.remove(order);
-  // }
-
   private async generateOrderNumber(): Promise<string> {
     const date = new Date();
-    const yyyymmdd = date.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
-
+    const yyyymmdd = date.toISOString().slice(0, 10).replace(/-/g, '');
     const prefix = `ORD${yyyymmdd}`;
 
-    // หา order ล่าสุดของวันนั้น (ใช้ order_number LIKE 'ORDyyyymmdd%')
     const latestOrder = await this.prisma.order.findFirst({
-      where: {
-        order_number: {
-          startsWith: prefix,
-        },
-      },
-      orderBy: {
-        order_number: 'desc',
-      },
+      where: { order_number: { startsWith: prefix } },
+      orderBy: { order_number: 'desc' },
     });
 
     let nextNumber = 1;

@@ -11,16 +11,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { AdminsService } from './admins.service';
-import { CreateAdminDto, UpdateAdminDto } from './admins.dto';
+import { CreateAdminDto } from './dto/create-admins.dto';
+import { UpdateAdminDto } from './dto/update-admins.dto';
 import { Delete, Param, NotFoundException } from '@nestjs/common'; // ⬅️ เพิ่มตรง import ด้านบน
 import * as fs from 'fs';
 import * as path from 'path';
-import { User } from 'src/users/user.entity';
 import { editFileName, imageFileFilter } from '../common/utils/file-upload';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { Request } from 'express';
-
+import { users as User } from '@prisma/client';
 @Controller('admins')
 export class AdminsController {
   constructor(private readonly adminsService: AdminsService) {}
@@ -40,7 +40,7 @@ export class AdminsController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
+        destination: path.join(process.cwd(), 'public', 'uploads', 'users'),
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -97,7 +97,7 @@ export class AdminsController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
+        destination: path.join(process.cwd(), 'public', 'uploads', 'users'),
         filename: editFileName, // ✅ ใช้ฟังก์ชัน rename ของคุณ
       }),
       fileFilter: imageFileFilter, // ✅ filter เฉพาะ .jpg .jpeg .png .gif
@@ -123,14 +123,18 @@ export class AdminsController {
       // ✅ ลบรูปเก่า
       const admin = await this.findOne(parseInt(req.params.id));
       const oldPath = admin.avatar_url
-        ? path.join(__dirname, '..', '..', admin.avatar_url)
+        ? path.join(process.cwd(), admin.avatar_url)
         : null;
       if (oldPath && fs.existsSync(oldPath)) {
         fs.unlinkSync(oldPath);
       }
     }
     try {
-      return this.adminsService.update(parseInt(req.params.id), dto);
+      return this.adminsService.update(
+        parseInt(req.params.id),
+        dto,
+        file?.filename, // ✅ ส่งชื่อไฟล์เข้าไปให้ service
+      );
     } catch (error) {
       // ❌ ถ้า save admin ไม่สำเร็จ → ลบไฟล์ออก
       if (file?.path) {

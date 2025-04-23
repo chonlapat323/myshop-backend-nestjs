@@ -5,3 +5,9 @@ export enum UserRole {
   SUPERVISOR = '2',
   MEMBER = '3',
 }
+
+export const UserRoleMap = {
+  admin: UserRole.ADMIN,
+  supervisor: UserRole.SUPERVISOR,
+  member: UserRole.MEMBER,
+} as const;

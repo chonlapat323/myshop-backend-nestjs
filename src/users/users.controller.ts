@@ -15,7 +15,8 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CreateUserDto, UpdateUserDto } from './user.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
@@ -70,7 +71,7 @@ export class UserController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
+        destination: path.join(process.cwd(), 'public', 'uploads', 'users'),
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -123,7 +124,7 @@ export class UserController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
+        destination: path.join(process.cwd(), 'public', 'uploads', 'users'),
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -152,7 +153,11 @@ export class UserController {
     }
 
     try {
-      const updatedUser = await this.usersService.update(id, dto);
+      const updatedUser = await this.usersService.update(
+        id,
+        dto,
+        avatar?.filename,
+      );
       return {
         message: '✅ User updated successfully',
         user: updatedUser,
@@ -170,7 +175,7 @@ export class UserController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
-        destination: path.join(__dirname, '..', '..', 'uploads', 'users'),
+        destination: path.join(process.cwd(), 'public', 'uploads', 'users'),
         filename: (req, file, cb) => {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
