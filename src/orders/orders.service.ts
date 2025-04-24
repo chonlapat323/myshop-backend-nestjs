@@ -22,6 +22,7 @@ export class OrdersService {
     });
 
     const orderNumber = await this.generateOrderNumber();
+    const discount = dto.discountValue || 0;
 
     const orderItems = dto.items.map((item) => {
       const product = products.find((p) => p.id === item.productId);
@@ -36,14 +37,14 @@ export class OrdersService {
         product_name: product.name,
         quantity: item.quantity,
         price,
+        discount_price: product.discountPrice,
       };
     });
-
     const subtotal = orderItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0,
     );
-    const discount = dto.discountValue || 0;
+
     const shipping = dto.shippingCost || 0;
     const total = subtotal - discount + shipping;
 
@@ -63,7 +64,9 @@ export class OrdersService {
         shipping_address_line2: dto.shippingAddressLine2 || null,
         shipping_city: dto.shippingCity,
         shipping_zip: dto.shippingZip,
+        shipping_phone: dto.shippingPhone,
         shipping_country: dto.shippingCountry,
+        shipping_state: dto.shippingState,
       },
     });
 
@@ -110,7 +113,6 @@ export class OrdersService {
 
     return orders.map((order) => ({
       id: order.id,
-      email: order.users.email,
       order_number: order.order_number,
       total_price: Number(order.total_price),
       order_status: order.order_status,
@@ -131,6 +133,15 @@ export class OrdersService {
           })),
         },
       })),
+      shipping_address: {
+        full_name: order.shipping_full_name,
+        address_line: order.shipping_address_line1,
+        city: order.shipping_city,
+        zip_code: order.shipping_zip,
+        country: order.shipping_country,
+        phone_number: order.shipping_phone,
+        state: order.shipping_state,
+      },
     }));
   }
 
@@ -165,6 +176,7 @@ export class OrdersService {
       total_price: Number(order.total_price),
       order_status: order.order_status,
       created_at: order.created_at.toISOString(),
+      tracking_number: order.tracking_number ?? null,
       items: order.order_items.map((item) => ({
         id: item.id,
         product_name: item.product_name,
@@ -180,7 +192,15 @@ export class OrdersService {
           })),
         },
       })),
-      tracking_number: order.tracking_number ?? null,
+      shipping_address: {
+        full_name: order.shipping_full_name,
+        address_line: order.shipping_address_line1,
+        city: order.shipping_city,
+        zip_code: order.shipping_zip,
+        country: order.shipping_country,
+        phone_number: order.shipping_phone,
+        state: order.shipping_state,
+      },
     }));
   }
 
@@ -223,6 +243,7 @@ export class OrdersService {
         product_name: item.product_name,
         quantity: item.quantity,
         price: Number(item.price),
+        discount_price: order.discount_value,
         product: {
           product_image: item.product.product_image.map((img) => ({
             id: img.id,

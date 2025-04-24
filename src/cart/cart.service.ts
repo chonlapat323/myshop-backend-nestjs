@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class CartService {
@@ -59,15 +60,14 @@ export class CartService {
 
     if (!product) throw new Error('Product not found');
 
-    const price = product.discountPrice ?? product.price;
-
     // 6. เพิ่มรายการใหม่ลง cart_item
     return this.prisma.cart_item.create({
       data: {
         cart_id: cart.id,
         product_id: productId,
         quantity,
-        price_snapshot: price,
+        price_snapshot: product.price,
+        discount_snapshot: product.discountPrice ?? null,
       },
     });
   }
