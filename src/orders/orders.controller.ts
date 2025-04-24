@@ -36,7 +36,6 @@ export class OrdersController {
       return this.ordersService.findAll();
     }
 
-    // ถ้าเป็น member ให้ดูแค่ของตัวเอง
     return this.ordersService.findByUserId(user.id);
   }
 
