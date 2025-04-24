@@ -53,9 +53,11 @@ model order {
   payment_method         String   @db.VarChar
   status                 String   @default("pending") @db.VarChar
   shipping_full_name     String   @db.VarChar
+  shipping_phone         String?   @db.VarChar
   shipping_address_line1 String   @db.VarChar
   shipping_address_line2 String?  @db.VarChar
   shipping_city          String   @db.VarChar
+  shipping_state         String?   @db.VarChar
   shipping_zip           String   @db.VarChar
   shipping_country       String   @db.VarChar
   created_at             DateTime @default(now()) @db.Timestamp(6)
@@ -75,13 +77,14 @@ enum OrderStatus {
 }
 
 model order_items {
-  id         Int      @id @default(autoincrement())
-  orderId    Int
-  productId  Int
-  product    products @relation(fields: [productId], references: [id])
-  order      order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product_name String @db.VarChar
-  price      Decimal  @db.Decimal(10, 2)
+  id                Int      @id @default(autoincrement())
+  orderId           Int
+  productId         Int
+  product    products       @relation(fields: [productId], references: [id])
+  order      order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product_name      String  @db.VarChar
+  price             Decimal @db.Decimal(10, 2)
+  discount_price    Decimal?  @db.Decimal(10, 2)
   quantity   Int
 
   @@map("order_items")
@@ -207,15 +210,16 @@ model cart {
 }
 
 model cart_item {
-  id             Int      @id @default(autoincrement())
-  cart_id        Int
-  product_id     Int
-  quantity       Int
-  price_snapshot Decimal  @db.Decimal(10, 2)
-  cart           cart     @relation(fields: [cart_id], references: [id], onDelete: Cascade, map: "FK_cartitem_cart")
-  products       products @relation(fields: [product_id], references: [id], onDelete: NoAction, map: "FK_cartitem_product")
-  created_at DateTime    @default(now()) @db.Timestamp(6)
-  updated_at DateTime    @default(now()) @updatedAt @db.Timestamp(6)
+  id                  Int       @id @default(autoincrement())
+  cart_id             Int
+  product_id          Int
+  quantity            Int
+  price_snapshot      Decimal   @db.Decimal(10, 2)
+  discount_snapshot   Decimal?  @db.Decimal(10, 2)
+  cart           cart           @relation(fields: [cart_id], references: [id], onDelete: Cascade, map: "FK_cartitem_cart")
+  products       products       @relation(fields: [product_id], references: [id], onDelete: NoAction, map: "FK_cartitem_product")
+  created_at          DateTime  @default(now()) @db.Timestamp(6)
+  updated_at          DateTime  @default(now()) @updatedAt @db.Timestamp(6)
   
   @@map("cart_items")
 }

@@ -46,6 +46,12 @@ export class CreateOrderDto {
 
   @IsString()
   shippingCountry: string;
+
+  @IsString()
+  shippingPhone: string;
+
+  @IsString()
+  shippingState: string;
 }
 
 export class OrderItemDto {
