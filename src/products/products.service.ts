@@ -73,6 +73,14 @@ export class ProductsService {
       where: { is_best_seller: true },
       orderBy: { updated_at: 'desc' },
       take: 4,
+      include: {
+        product_image: true,
+        products_tags_tags: {
+          include: {
+            tags: true,
+          },
+        },
+      },
     });
   }
 
