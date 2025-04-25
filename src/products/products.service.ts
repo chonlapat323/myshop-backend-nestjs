@@ -25,16 +25,27 @@ export class ProductsService {
     });
   }
 
-  findOne(id: number) {
-    return this.prisma.products.findUnique({
+  async findOne(id: number) {
+    const data = await this.prisma.products.findUnique({
       where: { id },
       include: {
         product_image: true,
         variants: true,
-        products_tags_tags: true,
         category: true,
+        products_tags_tags: {
+          include: {
+            tags: true,
+          },
+        },
       },
     });
+
+    if (!data) throw new NotFoundException('Product not found');
+
+    return {
+      ...data,
+      tags: data.products_tags_tags.map((ptt) => ptt.tags),
+    };
   }
 
   async findPaginated(limit: number, skip: number) {
@@ -69,7 +80,7 @@ export class ProductsService {
   }
 
   async findBestSellers() {
-    return this.prisma.products.findMany({
+    const data = await this.prisma.products.findMany({
       where: { is_best_seller: true },
       orderBy: { updated_at: 'desc' },
       take: 4,
@@ -82,6 +93,13 @@ export class ProductsService {
         },
       },
     });
+
+    const mapped = data.map((product) => ({
+      ...product,
+      tags: product.products_tags_tags.map((ptt) => ptt.tags),
+    }));
+
+    return mapped;
   }
 
   async findByCategory(
@@ -89,13 +107,35 @@ export class ProductsService {
     search?: string,
     sort?: 'lowest' | 'highest',
   ) {
-    return this.prisma.products.findMany({
+    const data = await this.prisma.products.findMany({
       where: {
         category: {
           link: slug,
         },
         is_active: true,
-        name: search ? { contains: search, mode: 'insensitive' } : undefined,
+        //name: search ? { contains: search, mode: 'insensitive' } : undefined,
+        OR: search
+          ? [
+              {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                products_tags_tags: {
+                  some: {
+                    tags: {
+                      name: {
+                        contains: search,
+                        mode: 'insensitive',
+                      },
+                    },
+                  },
+                },
+              },
+            ]
+          : undefined,
       },
       orderBy:
         sort === 'lowest'
@@ -103,8 +143,22 @@ export class ProductsService {
           : sort === 'highest'
             ? { price: 'desc' }
             : undefined,
-      include: { product_image: true },
+      include: {
+        product_image: true,
+        products_tags_tags: {
+          include: {
+            tags: true,
+          },
+        },
+      },
     });
+
+    const mapped = data.map((product) => ({
+      ...product,
+      tags: product.products_tags_tags.map((ptt) => ptt.tags),
+    }));
+
+    return mapped;
   }
 
   async create(dto: CreateProductDto) {
@@ -158,22 +212,44 @@ export class ProductsService {
       category_id: dto.category_id ?? null,
     };
 
-    // update product main info
     await this.prisma.products.update({
       where: { id },
       data: updateData,
     });
 
-    // upsert product_image
+    // upsert images
     await this.prisma.$transaction(
       finalImages.map((img) =>
         this.prisma.product_image.upsert({
-          where: { id: img.id ?? 0 }, // fallback to id: 0 if new
+          where: { id: img.id ?? 0 },
           update: img,
           create: img,
         }),
       ),
     );
+
+    // 🔁 จัดการ tags
+    await this.prisma.products_tags_tags.deleteMany({
+      where: { productsId: id },
+    });
+
+    if (tags && tags.length > 0) {
+      const tagUpserts = tags.map((name) =>
+        this.prisma.tags.upsert({
+          where: { name },
+          update: {},
+          create: { name },
+        }),
+      );
+      const createdTags = await this.prisma.$transaction(tagUpserts);
+
+      await this.prisma.products_tags_tags.createMany({
+        data: createdTags.map((tag) => ({
+          productsId: id,
+          tagsId: tag.id,
+        })),
+      });
+    }
 
     return this.prisma.products.findUnique({
       where: { id },
@@ -231,60 +307,5 @@ export class ProductsService {
     await this.prisma.product_image.delete({ where: { id } });
 
     return { message: 'Image removed successfully' };
-  }
-
-  async syncImages(productId: number, imageUrls: ImageUrlDto[]) {
-    const existingImages = await this.prisma.product_image.findMany({
-      where: { productId },
-    });
-    const existingMap = new Map(existingImages.map((img) => [img.url, img]));
-    const incomingUrls = imageUrls.map((img) => img.url);
-
-    const toDelete = existingImages.filter(
-      (img) => !incomingUrls.includes(img.url),
-    );
-    await this.prisma.product_image.deleteMany({
-      where: { id: { in: toDelete.map((img) => img.id) } },
-    });
-
-    const imagesToSave = imageUrls.map((img, i) => {
-      const existing = existingMap.get(img.url);
-      return existing
-        ? { ...existing, order_image: i, is_main: i === 0 }
-        : { url: img.url, productId, order_image: i, is_main: i === 0 };
-    });
-
-    await this.prisma.$transaction(
-      imagesToSave.map((img) => {
-        if ('id' in img && typeof img.id === 'number') {
-          // มี id → upsert
-          return this.prisma.product_image.upsert({
-            where: { id: img.id },
-            update: {
-              url: img.url,
-              productId: img.productId,
-              order_image: img.order_image,
-              is_main: img.is_main,
-            },
-            create: {
-              url: img.url,
-              productId: img.productId,
-              order_image: img.order_image,
-              is_main: img.is_main,
-            },
-          });
-        } else {
-          // ไม่มี id → สร้างใหม่
-          return this.prisma.product_image.create({
-            data: {
-              url: img.url,
-              productId: img.productId,
-              order_image: img.order_image,
-              is_main: img.is_main,
-            },
-          });
-        }
-      }),
-    );
   }
 }
