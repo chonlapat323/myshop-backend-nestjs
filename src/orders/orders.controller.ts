@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
@@ -15,19 +16,26 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from 'types/member/order';
 import { UserRole } from 'src/constants/user-role.enum';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { JwtPayload } from 'types/auth/jwt-payload.interface';
 @UseGuards(JwtAuthGuard)
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  async findAll(@Req() req): Promise<Order[]> {
-    const user = req.user;
-    if (user.role === UserRole.ADMIN) {
-      return this.ordersService.findAll();
-    }
+  async findMyOrders(@CurrentUser() user: JwtPayload): Promise<Order[]> {
+    return this.ordersService.findByUserId(user.userId);
+  }
 
-    return this.ordersService.findByUserId(user.id);
+  @Get('admin')
+  async findAllOrders(@CurrentUser() user: JwtPayload): Promise<Order[]> {
+    if (user.role_id !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'You are not allowed to access admin orders',
+      );
+    }
+    return this.ordersService.findAll();
   }
 
   @Get(':id')
@@ -36,9 +44,11 @@ export class OrdersController {
   }
 
   @Post()
-  create(@Req() req, @Body() createOrderDto: CreateOrderDto) {
-    const userId = req.user?.userId;
-    return this.ordersService.create(userId, createOrderDto);
+  create(
+    @CurrentUser() user: JwtPayload,
+    @Body() createOrderDto: CreateOrderDto,
+  ) {
+    return this.ordersService.create(user.userId, createOrderDto);
   }
 
   @Patch(':id')
@@ -50,7 +60,10 @@ export class OrdersController {
   }
 
   @Patch(':id/cancel')
-  async cancelOrder(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.ordersService.cancelOrder(id, req.user.id);
+  async cancelOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.ordersService.cancelOrder(id, user.userId);
   }
 }

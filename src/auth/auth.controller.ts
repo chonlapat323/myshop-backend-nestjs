@@ -18,11 +18,17 @@ import { UserPayload } from 'types/auth/auth.services';
 
 @Controller('auth')
 export class AuthController {
+  private readonly jwtSecret: string;
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.jwtSecret = this.configService.get<string>('JWT_SECRET')!;
+    if (!this.jwtSecret) {
+      throw new Error('JWT_SECRET is not defined in environment variables.');
+    }
+  }
 
   @Post('login')
   async login(
@@ -62,7 +68,7 @@ export class AuthController {
 
     try {
       const payload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: this.configService.get('JWT_SECRET'),
+        secret: this.jwtSecret,
       });
 
       const newAccessToken = this.jwtService.sign(
@@ -72,7 +78,7 @@ export class AuthController {
           role: payload.role,
         },
         {
-          secret: this.configService.get('JWT_SECRET'),
+          secret: this.jwtSecret,
           expiresIn: '5m',
         },
       );
@@ -99,7 +105,7 @@ export class AuthController {
 
     try {
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: this.configService.get('JWT_SECRET'),
+        secret: this.jwtSecret,
       });
 
       return {
@@ -110,7 +116,7 @@ export class AuthController {
         },
       };
     } catch {
-      return { user: null }; //  token หมดอายุ ก็ไม่ error
+      return { user: null };
     }
   }
 
@@ -132,7 +138,7 @@ export class AuthController {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      path: '/auth/refresh', // ต้องระบุ path ให้ตรงกับที่ตั้งไว้
+      path: '/auth/refresh',
     });
 
     return { message: 'Logged out successfully' };

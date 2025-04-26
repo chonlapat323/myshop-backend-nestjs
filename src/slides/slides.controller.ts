@@ -20,6 +20,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { generateTempFilename } from 'utils/file.util';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { imageFileFilter } from 'utils';
 
 @Controller('slides')
 export class SlidesController {
@@ -62,8 +63,8 @@ export class SlidesController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: string) {
-    return this.slidesService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.slidesService.remove(id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -76,15 +77,7 @@ export class SlidesController {
           callback(null, generateTempFilename(file.originalname));
         },
       }),
-      fileFilter: (req, file, callback) => {
-        if (!file.mimetype.startsWith('image/')) {
-          return callback(
-            new BadRequestException('Only image files are allowed!'),
-            false,
-          );
-        }
-        callback(null, true);
-      },
+      fileFilter: imageFileFilter,
     }),
   )
   uploadMultiple(@UploadedFiles() files: Express.Multer.File[]) {

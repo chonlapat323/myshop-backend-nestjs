@@ -116,7 +116,7 @@ export class CategoriesController {
     }),
   )
   async updateCategory(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() body: UpdateCategoryDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
@@ -126,7 +126,7 @@ export class CategoriesController {
 
     try {
       const updatedCategory = await this.categoriesService.update(
-        +id,
+        id,
         body,
         imagePath,
       );
@@ -135,10 +135,9 @@ export class CategoriesController {
         category: updatedCategory,
       };
     } catch (error) {
-      // ✅ ถ้าอัปโหลดแล้ว error → ลบไฟล์
       if (file?.path && fs.existsSync(file.path)) {
-        fs.unlink(file.path, (err) => {
-          if (err) console.error('❌ Failed to remove uploaded file:', err);
+        await fs.promises.unlink(file.path).catch((err) => {
+          console.error('❌ Failed to remove uploaded file:', err);
         });
       }
       throw error;
@@ -147,7 +146,7 @@ export class CategoriesController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.categoriesService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.categoriesService.remove(id);
   }
 }

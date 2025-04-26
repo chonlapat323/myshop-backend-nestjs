@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { AddressService } from './address.service';
 import { CreateAddressDto } from './dto/create-address.dto';
@@ -25,7 +26,10 @@ export class AddressController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.addressService.findOne(id, user.userId);
   }
 
@@ -36,7 +40,7 @@ export class AddressController {
 
   @Patch(':id')
   update(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: JwtPayload,
     @Body() dto: UpdateAddressDto,
   ) {
@@ -44,12 +48,18 @@ export class AddressController {
   }
 
   @Patch(':id/default')
-  setDefault(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
+  setDefault(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.addressService.setDefault(id, user.userId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.addressService.remove(id, user.userId);
   }
 }
