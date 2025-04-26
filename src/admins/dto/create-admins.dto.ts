@@ -1,6 +1,5 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, IsOptional, IsBoolean } from 'class-validator';
-import { PartialType } from '@nestjs/mapped-types';
 
 export class CreateAdminDto {
   @IsString()

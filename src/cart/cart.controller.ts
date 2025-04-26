@@ -11,7 +11,7 @@ import {
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { JwtPayload } from 'src/auth/type/jwt-payload.interface';
+import { JwtPayload } from 'types/auth/jwt-payload.interface';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)

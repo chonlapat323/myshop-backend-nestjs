@@ -1,8 +1,6 @@
-// dto/create-slide.dto.ts
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,

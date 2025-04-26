@@ -2,12 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateAdminDto } from './dto/create-admins.dto';
 import { UpdateAdminDto } from './dto/update-admins.dto';
 import * as bcrypt from 'bcrypt';
-import * as fs from 'fs';
-import * as path from 'path';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { pick } from 'src/common/utils/clean-dto.util';
-import { users as User } from '@prisma/client';
+import { Prisma, users as User } from '@prisma/client';
 import { UserRole } from 'src/constants/user-role.enum';
+import { deleteFile } from 'utils/file.util';
 
 @Injectable()
 export class AdminsService {
@@ -23,11 +21,11 @@ export class AdminsService {
     });
   }
 
-  async create(dto: CreateAdminDto, avatarUrl?: string) {
+  async create(dto: CreateAdminDto, avatarUrl?: string): Promise<User> {
     const { password, confirm_password, ...safeData } = dto;
     const hashedPassword = await bcrypt.hash(dto.password!, 10);
 
-    const data = {
+    const data: Prisma.usersCreateInput = {
       ...safeData,
       hashed_password: hashedPassword,
       avatar_url: avatarUrl ?? null,
@@ -38,53 +36,42 @@ export class AdminsService {
   }
 
   async update(
-    id: number,
+    id_: number,
     dto: UpdateAdminDto,
     avatarFilename?: string,
   ): Promise<User> {
-    const admin = await this.findById(id);
+    const admin = await this.findById(id_);
     if (!admin) {
-      throw new NotFoundException(`Admin with ID ${id} not found`);
+      throw new NotFoundException(`Admin with ID ${id_} not found`);
     }
 
-    if (dto.password && dto.password.trim() !== '') {
-      dto.hashed_password = await bcrypt.hash(dto.password, 10);
-    }
+    const { password, id, ...safeData } = dto;
 
-    const data = pick(dto, [
-      'first_name',
-      'last_name',
-      'email',
-      'hashed_password',
-      'role_id',
-      'phone_number',
-      'is_active',
-      'note',
-    ]);
+    const updateData: Prisma.usersUpdateInput = {
+      ...safeData,
+      ...(avatarFilename
+        ? { avatar_url: `/uploads/users/${avatarFilename}` }
+        : {}),
+    };
 
-    if (avatarFilename) {
-      data.avatar_url = `/uploads/users/${avatarFilename}`;
+    if (password && password.trim() !== '') {
+      updateData.hashed_password = await bcrypt.hash(password, 10);
     }
 
     return this.prisma.users.update({
-      where: { id },
-      data,
+      where: { id: id_ },
+      data: updateData,
     });
   }
 
-  async remove(id: number) {
+  async remove(id: number): Promise<{ message: string }> {
     const admin = await this.findById(id);
     if (!admin) {
       throw new NotFoundException(`Admin with ID ${id} not found`);
     }
 
     if (admin.avatar_url) {
-      const filePath = path.join(process.cwd(), 'public', admin.avatar_url);
-      fs.unlink(filePath, (err) => {
-        if (err) {
-          console.error('❌ Failed to delete avatar:', err.message);
-        }
-      });
+      deleteFile(admin.avatar_url);
     }
 
     await this.prisma.users.delete({ where: { id } });

@@ -3,12 +3,13 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   Query,
   UseInterceptors,
   UploadedFile,
+  UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -17,6 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('categories')
 export class CategoriesController {
@@ -27,6 +29,7 @@ export class CategoriesController {
     return this.categoriesService.findActive();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('all')
   getAllCategories() {
     return this.categoriesService.findAllIncludingDeleted();
@@ -42,10 +45,11 @@ export class CategoriesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.categoriesService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.categoriesService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
@@ -91,7 +95,7 @@ export class CategoriesController {
     }
   }
 
-  // PATCH หรือ POST method แล้วแต่คุณเลือกใช้ (ในตัวอย่างใช้ POST)
+  @UseGuards(JwtAuthGuard)
   @Post(':id/update')
   @UseInterceptors(
     FileInterceptor('image', {
@@ -141,6 +145,7 @@ export class CategoriesController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.categoriesService.remove(+id);

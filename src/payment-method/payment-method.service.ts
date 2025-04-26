@@ -7,15 +7,6 @@ import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 export class PaymentMethodService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(userId: number, dto: CreatePaymentMethodDto) {
-    return this.prisma.paymentMethod.create({
-      data: {
-        ...dto,
-        user_id: userId,
-      },
-    });
-  }
-
   async findAll(userId: number) {
     return this.prisma.paymentMethod.findMany({
       where: { user_id: userId },
@@ -30,6 +21,15 @@ export class PaymentMethodService {
 
     if (!payment) throw new NotFoundException('Payment method not found');
     return payment;
+  }
+
+  async create(userId: number, dto: CreatePaymentMethodDto) {
+    return this.prisma.paymentMethod.create({
+      data: {
+        ...dto,
+        user_id: userId,
+      },
+    });
   }
 
   async update(id: number, userId: number, dto: UpdatePaymentMethodDto) {

@@ -25,9 +25,10 @@ import * as path from 'path';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { UserRole } from 'src/constants/user-role.enum';
-import { JwtPayload } from 'src/auth/type/jwt-payload.interface';
+import { JwtPayload } from 'types/auth/jwt-payload.interface';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
+@UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UserController {
   constructor(private readonly usersService: UsersService) {}
@@ -38,7 +39,6 @@ export class UserController {
     return this.usersService.findUsers({ role, page: pageNumber });
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('me')
   getMe(@CurrentUser() user: JwtPayload) {
     return this.usersService.findUserById(user.userId);
@@ -55,13 +55,11 @@ export class UserController {
     return member;
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('admins')
   findAdmins() {
     return this.usersService.findByRoles([UserRole.ADMIN, UserRole.SUPERVISOR]);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('members')
   findMembers() {
     return this.usersService.findByRoles([UserRole.MEMBER]);
@@ -82,18 +80,14 @@ export class UserController {
     }),
   )
   async create(
-    @Req() req: Request, // 👈 รับ request ทั้งก้อนแทน @Body()
+    @Req() req: Request,
     @UploadedFile() avatar?: Express.Multer.File,
   ) {
     const rawBody = req.body;
     const avatarUrl = avatar ? `/uploads/users/${avatar.filename}` : undefined;
-    console.log(avatarUrl);
-    // ✅ แปลงจาก plain object → DTO
     const dto = plainToInstance(CreateUserDto, rawBody);
-    // ✅ ตรวจสอบ DTO
     const errors = await validate(dto);
     if (errors.length > 0) {
-      // ❌ ลบรูปถ้า validate ไม่ผ่าน
       if (avatar?.path) {
         const fullPath = path.resolve(avatar.path);
         fs.unlink(fullPath, (err) => {
@@ -170,7 +164,6 @@ export class UserController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('me')
   @UseInterceptors(
     FileInterceptor('avatar', {

@@ -13,17 +13,12 @@ import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { JwtPayload } from 'src/auth/type/jwt-payload.interface';
+import { JwtPayload } from 'types/auth/jwt-payload.interface';
 
 @UseGuards(JwtAuthGuard)
 @Controller('payment-method')
 export class PaymentMethodController {
   constructor(private readonly service: PaymentMethodService) {}
-
-  @Post()
-  create(@Body() dto: CreatePaymentMethodDto, @CurrentUser() user: JwtPayload) {
-    return this.service.create(user.userId, dto);
-  }
 
   @Get()
   findAll(@CurrentUser() user: JwtPayload) {
@@ -33,6 +28,11 @@ export class PaymentMethodController {
   @Get(':id')
   findOne(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
     return this.service.findOne(id, user.userId);
+  }
+
+  @Post()
+  create(@Body() dto: CreatePaymentMethodDto, @CurrentUser() user: JwtPayload) {
+    return this.service.create(user.userId, dto);
   }
 
   @Patch(':id')

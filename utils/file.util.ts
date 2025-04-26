@@ -1,6 +1,7 @@
 import { extname } from 'path';
 import * as fs from 'fs';
 import * as path from 'path';
+
 export function generateTempFilename(originalName: string) {
   const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
   const ext = extname(originalName);
@@ -63,4 +64,13 @@ export function moveTempSlideImage(originalUrl: string): string {
   }
 
   return originalUrl;
+}
+
+export function deleteFile(relativePath: string) {
+  const filePath = path.join(process.cwd(), 'public', relativePath);
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      console.error('❌ Failed to delete file:', err.message);
+    }
+  });
 }

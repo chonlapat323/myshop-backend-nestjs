@@ -13,82 +13,6 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: number, dto: CreateOrderDto) {
-    const user = await this.prisma.users.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-
-    const products = await this.prisma.products.findMany({
-      where: { id: { in: dto.items.map((i) => i.productId) } },
-    });
-
-    const orderNumber = await this.generateOrderNumber();
-    const discount = dto.discountValue || 0;
-
-    const orderItems = dto.items.map((item) => {
-      const product = products.find((p) => p.id === item.productId);
-      if (!product)
-        throw new NotFoundException(`Product ${item.productId} not found`);
-      const price =
-        product.price instanceof Prisma.Decimal
-          ? product.price.toNumber()
-          : Number(product.price);
-      return {
-        productId: product.id,
-        product_name: product.name,
-        quantity: item.quantity,
-        price,
-        discount_price: product.discountPrice,
-      };
-    });
-    const subtotal = orderItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
-
-    const shipping = dto.shippingCost || 0;
-    const total = subtotal - discount + shipping;
-
-    const order = await this.prisma.order.create({
-      data: {
-        userId,
-        order_number: orderNumber,
-        subtotal_price: subtotal,
-        discount_value: discount,
-        coupon_code: dto.couponCode || null,
-        shipping_cost: shipping,
-        total_price: total,
-        payment_method: dto.paymentMethod,
-        status: 'pending',
-        shipping_full_name: dto.shippingFullName,
-        shipping_address_line1: dto.shippingAddressLine1,
-        shipping_address_line2: dto.shippingAddressLine2 || null,
-        shipping_city: dto.shippingCity,
-        shipping_zip: dto.shippingZip,
-        shipping_phone: dto.shippingPhone,
-        shipping_country: dto.shippingCountry,
-        shipping_state: dto.shippingState,
-      },
-    });
-
-    await this.prisma.order_items.createMany({
-      data: orderItems.map((item) => ({
-        ...item,
-        orderId: order.id,
-      })),
-    });
-
-    const cart = await this.prisma.cart.findFirst({
-      where: { user_id: userId },
-    });
-
-    if (cart) {
-      await this.prisma.cart_item.deleteMany({ where: { cart_id: cart.id } });
-      await this.prisma.cart.delete({ where: { id: cart.id } });
-    }
-
-    return order;
-  }
-
   async findAll(): Promise<Order[]> {
     const orders = await this.prisma.order.findMany({
       orderBy: { created_at: 'desc' },
@@ -255,6 +179,89 @@ export class OrdersService {
         },
       })),
     };
+  }
+
+  async create(userId: number, dto: CreateOrderDto) {
+    const user = await this.prisma.users.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const products = await this.prisma.products.findMany({
+      where: { id: { in: dto.items.map((i) => i.productId) } },
+    });
+
+    const orderNumber = await this.generateOrderNumber();
+    const discount = dto.discountValue || 0;
+
+    const orderItems = dto.items.map((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product)
+        throw new NotFoundException(`Product ${item.productId} not found`);
+
+      const price =
+        product.price instanceof Prisma.Decimal
+          ? product.price.toNumber()
+          : Number(product.price);
+
+      return {
+        productId: product.id,
+        product_name: product.name,
+        quantity: item.quantity,
+        price,
+        discount_price: product.discountPrice,
+      };
+    });
+
+    const subtotal = orderItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+
+    const shipping = dto.shippingCost || 0;
+    const total = subtotal - discount + shipping;
+
+    const cart = await this.prisma.cart.findFirst({
+      where: { user_id: userId },
+    });
+
+    const orderData = {
+      userId,
+      order_number: orderNumber,
+      subtotal_price: subtotal,
+      discount_value: discount,
+      coupon_code: dto.couponCode || null,
+      shipping_cost: shipping,
+      total_price: total,
+      payment_method: dto.paymentMethod,
+      status: 'pending',
+      shipping_full_name: dto.shippingFullName,
+      shipping_address_line1: dto.shippingAddressLine1,
+      shipping_address_line2: dto.shippingAddressLine2 || null,
+      shipping_city: dto.shippingCity,
+      shipping_zip: dto.shippingZip,
+      shipping_phone: dto.shippingPhone,
+      shipping_country: dto.shippingCountry,
+      shipping_state: dto.shippingState,
+    };
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const createdOrder = await tx.order.create({ data: orderData });
+
+      await tx.order_items.createMany({
+        data: orderItems.map((item) => ({
+          ...item,
+          orderId: createdOrder.id,
+        })),
+      });
+
+      if (cart) {
+        await tx.cart_item.deleteMany({ where: { cart_id: cart.id } });
+        await tx.cart.delete({ where: { id: cart.id } });
+      }
+
+      return createdOrder;
+    });
+
+    return result;
   }
 
   async updateOrder(id: number, data: UpdateOrderDto) {

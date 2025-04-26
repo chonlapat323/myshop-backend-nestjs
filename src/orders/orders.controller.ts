@@ -1,8 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
-  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
@@ -14,20 +12,13 @@ import {
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { Order } from 'types/member/order';
 import { UserRole } from 'src/constants/user-role.enum';
-
-@UseGuards(AuthGuard('jwt'))
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+@UseGuards(JwtAuthGuard)
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
-
-  @Post()
-  create(@Req() req, @Body() createOrderDto: CreateOrderDto) {
-    const userId = req.user?.userId;
-    return this.ordersService.create(userId, createOrderDto);
-  }
 
   @Get()
   async findAll(@Req() req): Promise<Order[]> {
@@ -44,6 +35,12 @@ export class OrdersController {
     return this.ordersService.findOne(id);
   }
 
+  @Post()
+  create(@Req() req, @Body() createOrderDto: CreateOrderDto) {
+    const userId = req.user?.userId;
+    return this.ordersService.create(userId, createOrderDto);
+  }
+
   @Patch(':id')
   async updateOrder(
     @Param('id', ParseIntPipe) id: number,
@@ -56,36 +53,4 @@ export class OrdersController {
   async cancelOrder(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.ordersService.cancelOrder(id, req.user.id);
   }
-
-  // @Get(':id')
-  // @UseGuards(AuthGuard('jwt'))
-  // async findOne(@Req() req, @Param('id') id: number) {
-  //   const order = await this.ordersService.findOne(+id);
-
-  //   // ✅ จำกัดสิทธิ์
-  //   if (req.user.role !== 'admin' && req.user.id !== order.user.id) {
-  //     throw new ForbiddenException('You cannot access this order');
-  //   }
-
-  //   return order;
-  // }
-
-  // @Patch(':id')
-  // update(
-  //   @Req() req,
-  //   @Param('id', ParseIntPipe) id: number,
-  //   @Body() dto: UpdateOrderDto,
-  // ) {
-  //   // ตัวอย่าง: ให้เฉพาะ admin เปลี่ยนสถานะ
-  //   if (req.user.role !== 'admin') {
-  //     throw new ForbiddenException('Only admins can update orders');
-  //   }
-
-  //   return this.ordersService.update(id, dto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id', ParseIntPipe) id: number) {
-  //   return this.ordersService.remove(id);
-  // }
 }

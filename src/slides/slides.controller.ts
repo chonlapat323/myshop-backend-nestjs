@@ -11,23 +11,19 @@ import {
   BadRequestException,
   Query,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { SlidesService } from './slides.service';
 import { CreateSlideDto } from './dto/create-slide.dto';
 import { UpdateSlideDto } from './dto/update-slide.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { generateTempFilename } from 'utils/file.util';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('slides')
 export class SlidesController {
   constructor(private readonly slidesService: SlidesService) {}
-
-  @Post()
-  create(@Body() createSlideDto: CreateSlideDto) {
-    return this.slidesService.create(createSlideDto);
-  }
 
   @Get()
   findAll(
@@ -43,24 +39,34 @@ export class SlidesController {
     return this.slidesService.findDefault();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: number) {
-    if (id === null) {
-      throw new BadRequestException('Invalid slide id');
-    }
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.slidesService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  create(@Body() createSlideDto: CreateSlideDto) {
+    return this.slidesService.create(createSlideDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  update(@Param('id') id: number, @Body() updateSlideDto: UpdateSlideDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSlideDto: UpdateSlideDto,
+  ) {
     return this.slidesService.update(id, updateSlideDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: string) {
     return this.slidesService.remove(+id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('upload-multiple')
   @UseInterceptors(
     FilesInterceptor('files', 4, {
@@ -93,6 +99,7 @@ export class SlidesController {
     };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete('/images/:id')
   async removeImage(@Param('id', ParseIntPipe) id: number) {
     return this.slidesService.removeImage(id);

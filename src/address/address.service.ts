@@ -13,22 +13,6 @@ import { addresses as PrismaAddress } from '@prisma/client';
 export class AddressService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: number, dto: CreateAddressDto): Promise<PrismaAddress> {
-    if (dto.is_default) {
-      await this.prisma.addresses.updateMany({
-        where: { user_id: userId },
-        data: { is_default: false },
-      });
-    }
-
-    return this.prisma.addresses.create({
-      data: {
-        ...dto,
-        user_id: userId,
-      },
-    });
-  }
-
   async findAll(userId: number): Promise<PrismaAddress[]> {
     return this.prisma.addresses.findMany({
       where: { user_id: userId },
@@ -46,6 +30,22 @@ export class AddressService {
     }
 
     return address;
+  }
+
+  async create(userId: number, dto: CreateAddressDto): Promise<PrismaAddress> {
+    if (dto.is_default) {
+      await this.prisma.addresses.updateMany({
+        where: { user_id: userId },
+        data: { is_default: false },
+      });
+    }
+
+    return this.prisma.addresses.create({
+      data: {
+        ...dto,
+        user_id: userId,
+      },
+    });
   }
 
   async update(

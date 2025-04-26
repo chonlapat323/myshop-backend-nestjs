@@ -5,13 +5,11 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
-import { pick } from 'src/common/utils/clean-dto.util';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { users as PrismaUser } from '@prisma/client';
+import { Prisma, users as PrismaUser } from '@prisma/client';
 import { UserRole, UserRoleMap } from 'src/constants/user-role.enum';
-import * as path from 'path';
-import * as fs from 'fs';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { deleteFile } from 'utils/file.util';
 
 @Injectable()
 export class UsersService {
@@ -65,24 +63,18 @@ export class UsersService {
       throw new ConflictException('Email นี้ถูกใช้งานแล้ว');
     }
 
-    const hashed = await bcrypt.hash(dto.password, 10);
-    const userData = pick(dto, [
-      'first_name',
-      'last_name',
-      'email',
-      'phone_number',
-      'note',
-      'is_active',
-    ]);
+    const { password, ...safeData } = dto;
 
-    return this.prisma.users.create({
-      data: {
-        ...userData,
-        hashed_password: hashed,
-        avatar_url: avatarUrl,
-        role_id: UserRole.MEMBER,
-      },
-    });
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const data = {
+      ...safeData,
+      hashed_password: hashedPassword,
+      avatar_url: avatarUrl ?? null,
+      role_id: UserRole.MEMBER,
+    };
+
+    return this.prisma.users.create({ data });
   }
 
   async update(
@@ -91,42 +83,39 @@ export class UsersService {
     avatarFilename?: string,
   ): Promise<PrismaUser> {
     const user = await this.prisma.users.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('User not found');
-    const userData = pick(dto, [
-      'first_name',
-      'last_name',
-      'email',
-      'phone_number',
-      'note',
-      'is_active',
-    ]);
-    if (avatarFilename) {
-      userData.avatar_url = `/uploads/users/${avatarFilename}`;
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const { password, ...safeData } = dto;
+
+    const safeDataWithoutId = Object.fromEntries(
+      Object.entries(safeData).filter(([key]) => key !== 'id'),
+    ) as Prisma.usersUpdateInput;
+
+    const data: Prisma.usersUpdateInput = {
+      ...safeDataWithoutId,
+      ...(avatarFilename
+        ? { avatar_url: `/uploads/users/${avatarFilename}` }
+        : {}),
+    };
+
+    if (password && password.trim() !== '') {
+      data.hashed_password = await bcrypt.hash(password, 10);
     }
 
     return this.prisma.users.update({
       where: { id },
-      data: userData,
+      data,
     });
   }
 
-  async remove(id: number) {
+  async remove(id: number): Promise<{ message: string }> {
     const user = await this.prisma.users.findUnique({ where: { id } });
     if (!user) throw new NotFoundException(`User with ID ${id} not found`);
 
     if (user.avatar_url) {
-      const filePath = path.join(
-        __dirname,
-        '..',
-        '..',
-        'public',
-        'users',
-        user.avatar_url,
-      );
-      fs.unlink(filePath, (err) => {
-        if (err) console.error('❌ Failed to delete avatar:', err.message);
-        else console.log('🗑️ Avatar deleted:', filePath);
-      });
+      deleteFile(user.avatar_url);
     }
 
     await this.prisma.users.delete({ where: { id } });

@@ -10,13 +10,19 @@ export class CartService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getCartItemCount(userId: number) {
-    const cart = await this.prisma.cart.findFirst({
-      where: { user_id: userId },
-      include: { items: true },
+    const result = await this.prisma.cart_item.aggregate({
+      _sum: {
+        quantity: true,
+      },
+      where: {
+        cart: {
+          user_id: userId,
+        },
+      },
     });
-
+    //count: result?.items.reduce((sum, item) => sum + item.quantity, 0) || 0,
     return {
-      count: cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0,
+      count: result._sum.quantity || 0,
     };
   }
 
@@ -58,7 +64,7 @@ export class CartService {
       where: { id: productId },
     });
 
-    if (!product) throw new Error('Product not found');
+    if (!product) throw new NotFoundException('Product not found');
 
     // 6. เพิ่มรายการใหม่ลง cart_item
     return this.prisma.cart_item.create({
@@ -78,7 +84,7 @@ export class CartService {
       include: {
         items: {
           orderBy: {
-            created_at: 'asc', // ✅ เรียงตามเวลาที่เพิ่มเข้า cart
+            created_at: 'asc',
           },
           include: {
             products: {

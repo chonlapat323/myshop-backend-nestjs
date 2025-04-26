@@ -1,4 +1,3 @@
-// admins.module.ts
 import { Module } from '@nestjs/common';
 import { AdminsController } from './admins.controller';
 import { AdminsService } from './admins.service';
