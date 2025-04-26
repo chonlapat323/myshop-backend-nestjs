@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Controller,
   Get,
+  ParseIntPipe,
   Post,
   Req,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -21,12 +23,14 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { Request } from 'express';
 import { users as User } from '@prisma/client';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+@UseGuards(JwtAuthGuard)
 @Controller('admins')
 export class AdminsController {
   constructor(private readonly adminsService: AdminsService) {}
 
   @Get(':id')
-  async findOne(@Param('id') id: number): Promise<User> {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<User> {
     const admin = await this.adminsService.findById(id);
 
     if (!admin) {
@@ -52,22 +56,18 @@ export class AdminsController {
   )
   async createAdmin(
     @UploadedFile() avatar: Express.Multer.File | undefined,
-    @Req() req: Request, // 👈 รับ request ทั้งก้อนแทน @Body()
+    @Req() req: Request,
   ) {
     const rawBody = req.body;
     const avatarUrl = avatar ? `/uploads/users/${avatar.filename}` : undefined;
 
-    // ✅ ป้องกัน hashed_password ไม่เป็น string
     if (typeof rawBody.hashed_password !== 'string') {
       rawBody.hashed_password = String(rawBody.hashed_password ?? '');
     }
 
-    // ✅ แปลงจาก plain object → DTO
     const dto = plainToInstance(CreateAdminDto, rawBody);
-    // ✅ ตรวจสอบ DTO
     const errors = await validate(dto);
     if (errors.length > 0) {
-      // ❌ ลบรูปถ้า validate ไม่ผ่าน
       if (avatar?.path) {
         const fullPath = path.resolve(avatar.path);
         fs.unlink(fullPath, (err) => {
@@ -98,30 +98,28 @@ export class AdminsController {
     FileInterceptor('avatar', {
       storage: diskStorage({
         destination: path.join(process.cwd(), 'public', 'uploads', 'users'),
-        filename: editFileName, // ✅ ใช้ฟังก์ชัน rename ของคุณ
+        filename: editFileName,
       }),
-      fileFilter: imageFileFilter, // ✅ filter เฉพาะ .jpg .jpeg .png .gif
+      fileFilter: imageFileFilter,
     }),
   )
   @Post(':id/update')
   async updateAdmin(
+    @Param('id', ParseIntPipe) id: number,
     @Req() req: Request,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     const rawBody = req.body;
     const dto = plainToInstance(UpdateAdminDto, rawBody);
 
-    // ✅ ตรวจสอบความถูกต้องด้วย class-validator
     const errors = await validate(dto);
     if (errors.length > 0) {
       throw new BadRequestException(errors);
     }
 
-    // ✅ แนบไฟล์ถ้ามี
     if (file) {
       dto.avatar_url = `/uploads/users/${file.filename}`;
-      // ✅ ลบรูปเก่า
-      const admin = await this.findOne(parseInt(req.params.id));
+      const admin = await this.findOne(id);
       const oldPath = admin.avatar_url
         ? path.join(process.cwd(), admin.avatar_url)
         : null;
@@ -130,30 +128,20 @@ export class AdminsController {
       }
     }
     try {
-      return this.adminsService.update(
-        parseInt(req.params.id),
-        dto,
-        file?.filename, // ✅ ส่งชื่อไฟล์เข้าไปให้ service
-      );
+      return this.adminsService.update(id, dto, file?.filename);
     } catch (error) {
-      // ❌ ถ้า save admin ไม่สำเร็จ → ลบไฟล์ออก
       if (file?.path) {
         const fullPath = path.resolve(file.path);
-        fs.unlink(fullPath, (err) => {
-          if (err) console.error('❌ Failed to remove uploaded file:', err);
+        await fs.promises.unlink(fullPath).catch((err) => {
+          console.error('❌ Failed to remove uploaded file:', err);
         });
       }
-
-      // ✅ ส่ง error กลับ
       throw error;
     }
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: number) {
-    if (!id) {
-      throw new NotFoundException('Invalid ID');
-    }
+  async remove(@Param('id', ParseIntPipe) id: number) {
     return this.adminsService.remove(id);
   }
 }

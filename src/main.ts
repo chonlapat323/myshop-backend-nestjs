@@ -8,7 +8,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.use(express.json()); // ✅ ใส่ให้แน่ใจว่ารับ JSON ได้
+  app.use(express.json()); // ใส่ให้แน่ใจว่ารับ JSON ได้
   app.use(express.urlencoded({ extended: true })); // สำหรับ form-urlencoded (optional)
   app.use(cookieParser());
   app.useGlobalPipes(

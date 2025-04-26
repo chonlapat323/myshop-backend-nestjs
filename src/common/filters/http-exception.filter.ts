@@ -1,4 +1,3 @@
-// src/common/filters/http-exception.filter.ts
 import {
   ExceptionFilter,
   Catch,
@@ -6,7 +5,7 @@ import {
   HttpException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { QueryFailedError } from 'typeorm';
 
 @Catch()

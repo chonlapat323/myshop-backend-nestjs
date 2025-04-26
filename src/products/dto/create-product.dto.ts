@@ -92,14 +92,12 @@ export class CreateProductDto {
   @Type(() => ImageUrlDto)
   imageUrls?: ImageUrlDto[];
 
-  // หากใช้ variants ค่อยเพิ่มภายหลัง
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => VariantDto)
   variants?: VariantDto[];
 }
 export class UpdateProductDto extends PartialType(CreateProductDto) {
-  // ...
   @IsOptional()
   @IsNumber()
   category_id?: number;

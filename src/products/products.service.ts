@@ -1,13 +1,8 @@
-// src/products/products.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  CreateProductDto,
-  ImageUrlDto,
-  UpdateProductDto,
-} from './dto/create-product.dto';
+import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { Prisma } from '@prisma/client';
 import { moveTempProductImage } from 'utils/file.util';
 
@@ -217,7 +212,6 @@ export class ProductsService {
       data: updateData,
     });
 
-    // upsert images
     await this.prisma.$transaction(
       finalImages.map((img) =>
         this.prisma.product_image.upsert({
@@ -228,7 +222,6 @@ export class ProductsService {
       ),
     );
 
-    // 🔁 จัดการ tags
     await this.prisma.products_tags_tags.deleteMany({
       where: { productsId: id },
     });
@@ -301,7 +294,6 @@ export class ProductsService {
       }
     } catch (err) {
       console.warn('⚠️ Failed to delete image file:', err.message);
-      // ไม่โยน error เพราะไฟล์หายไม่ถือเป็น failure ใหญ่
     }
 
     await this.prisma.product_image.delete({ where: { id } });

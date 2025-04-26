@@ -5,6 +5,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -20,14 +21,15 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
-import { extname } from 'path';
 import * as path from 'path';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { UserRole } from 'src/constants/user-role.enum';
-import { JwtPayload } from 'src/auth/type/jwt-payload.interface';
+import { JwtPayload } from 'types/auth/jwt-payload.interface';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-
+import { editFileName, imageFileFilter } from 'utils';
+import { promises as fsPromises } from 'fs';
+@UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UserController {
   constructor(private readonly usersService: UsersService) {}
@@ -38,30 +40,27 @@ export class UserController {
     return this.usersService.findUsers({ role, page: pageNumber });
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('me')
   getMe(@CurrentUser() user: JwtPayload) {
     return this.usersService.findUserById(user.userId);
   }
 
   @Get(':id')
-  async getUserById(@Param('id') id: number) {
+  async getUserById(@Param('id', ParseIntPipe) id: number) {
     const member = await this.usersService.findUserById(id);
 
-    if (!member || member.role_id !== '3') {
+    if (!member || member.role_id !== UserRole.ADMIN) {
       throw new NotFoundException('Member not found');
     }
 
     return member;
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('admins')
   findAdmins() {
     return this.usersService.findByRoles([UserRole.ADMIN, UserRole.SUPERVISOR]);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('members')
   findMembers() {
     return this.usersService.findByRoles([UserRole.MEMBER]);
@@ -72,33 +71,26 @@ export class UserController {
     FileInterceptor('avatar', {
       storage: diskStorage({
         destination: path.join(process.cwd(), 'public', 'uploads', 'users'),
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          cb(null, `avatar-${uniqueSuffix}${ext}`);
-        },
+        filename: editFileName,
       }),
+      fileFilter: imageFileFilter,
     }),
   )
   async create(
-    @Req() req: Request, // 👈 รับ request ทั้งก้อนแทน @Body()
+    @Req() req: Request,
     @UploadedFile() avatar?: Express.Multer.File,
   ) {
     const rawBody = req.body;
     const avatarUrl = avatar ? `/uploads/users/${avatar.filename}` : undefined;
-    console.log(avatarUrl);
-    // ✅ แปลงจาก plain object → DTO
     const dto = plainToInstance(CreateUserDto, rawBody);
-    // ✅ ตรวจสอบ DTO
     const errors = await validate(dto);
     if (errors.length > 0) {
-      // ❌ ลบรูปถ้า validate ไม่ผ่าน
       if (avatar?.path) {
-        const fullPath = path.resolve(avatar.path);
-        fs.unlink(fullPath, (err) => {
-          if (err) console.error('❌ Failed to remove uploaded file:', err);
-        });
+        try {
+          await fsPromises.unlink(path.resolve(avatar.path));
+        } catch (err) {
+          console.error('❌ Failed to remove uploaded file:', err);
+        }
       }
       throw new BadRequestException(errors);
     }
@@ -111,10 +103,11 @@ export class UserController {
       };
     } catch (error) {
       if (avatar?.path) {
-        const fullPath = path.resolve(avatar.path);
-        fs.unlink(fullPath, (err) => {
-          if (err) console.error('❌ Failed to remove uploaded file:', err);
-        });
+        try {
+          await fsPromises.unlink(path.resolve(avatar.path));
+        } catch (err) {
+          console.error('❌ Failed to remove uploaded file:', err);
+        }
       }
       throw error;
     }
@@ -125,17 +118,13 @@ export class UserController {
     FileInterceptor('avatar', {
       storage: diskStorage({
         destination: path.join(process.cwd(), 'public', 'uploads', 'users'),
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          cb(null, `avatar-${uniqueSuffix}${ext}`);
-        },
+        filename: editFileName,
       }),
+      fileFilter: imageFileFilter,
     }),
   )
   async update(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Req() req: Request,
     @UploadedFile() avatar?: Express.Multer.File,
   ) {
@@ -143,7 +132,11 @@ export class UserController {
     const errors = await validate(dto);
     if (errors.length > 0) {
       if (avatar?.path) {
-        fs.unlink(path.resolve(avatar.path), () => {});
+        try {
+          await fsPromises.unlink(path.resolve(avatar.path));
+        } catch (err) {
+          console.error('❌ Failed to remove uploaded file:', err);
+        }
       }
       throw new BadRequestException(errors);
     }
@@ -164,25 +157,24 @@ export class UserController {
       };
     } catch (error) {
       if (avatar?.path) {
-        fs.unlink(path.resolve(avatar.path), () => {});
+        try {
+          await fsPromises.unlink(path.resolve(avatar.path));
+        } catch (err) {
+          console.error('❌ Failed to remove uploaded file:', err);
+        }
       }
       throw error;
     }
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('me')
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: diskStorage({
         destination: path.join(process.cwd(), 'public', 'uploads', 'users'),
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          cb(null, `avatar-${uniqueSuffix}${ext}`);
-        },
+        filename: editFileName,
       }),
+      fileFilter: imageFileFilter,
     }),
   )
   async updateMe(
@@ -194,7 +186,11 @@ export class UserController {
     const errors = await validate(dto);
     if (errors.length > 0) {
       if (avatar?.path) {
-        fs.unlink(path.resolve(avatar.path), () => {});
+        try {
+          await fsPromises.unlink(path.resolve(avatar.path));
+        } catch (err) {
+          console.error('❌ Failed to remove uploaded file:', err);
+        }
       }
       throw new BadRequestException(errors);
     }
@@ -207,10 +203,7 @@ export class UserController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: number) {
-    if (!id) {
-      throw new NotFoundException('Invalid ID');
-    }
+  async remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
   }
 }

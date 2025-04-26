@@ -1,26 +1,25 @@
-// src/products/products.controller.ts
 import {
   Controller,
   Get,
   Post,
-  Put,
   Delete,
   Param,
   Body,
   ParseIntPipe,
   UseInterceptors,
-  UploadedFile,
   Query,
   UploadedFiles,
   BadRequestException,
   Patch,
+  UseGuards,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
 import * as path from 'path';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { editFileName, imageFileFilter } from 'utils';
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productService: ProductsService) {}
@@ -50,6 +49,7 @@ export class ProductsController {
     return this.productService.findOne(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('upload-multiple')
   @UseInterceptors(
     FilesInterceptor('files', 4, {
@@ -60,13 +60,9 @@ export class ProductsController {
           'uploads',
           'temp-uploads',
         ),
-        filename: (req, file, callback) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          callback(null, `temp-${uniqueSuffix}${ext}`);
-        },
+        filename: editFileName,
       }),
+      fileFilter: imageFileFilter,
     }),
   )
   uploadMultiple(@UploadedFiles() files: Express.Multer.File[]) {
@@ -81,11 +77,13 @@ export class ProductsController {
     };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() data: CreateProductDto) {
     return this.productService.create(data);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async updateProduct(
     @Param('id', ParseIntPipe) id: number,
@@ -94,16 +92,13 @@ export class ProductsController {
     return this.productService.update(id, dto);
   }
 
-  @Put(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
-    return this.productService.update(id, data);
-  }
-
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.productService.remove(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete('/images/:id')
   async removeImage(@Param('id', ParseIntPipe) id: number) {
     return this.productService.removeImage(id);

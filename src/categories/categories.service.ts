@@ -11,6 +11,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { category as Category } from '@prisma/client';
 import * as path from 'path';
 import * as fs from 'fs';
+import { deleteFile } from 'utils/file.util';
 
 @Injectable()
 export class CategoriesService {
@@ -32,10 +33,6 @@ export class CategoriesService {
   }
 
   async findOne(id: number): Promise<Category> {
-    if (isNaN(id)) {
-      throw new BadRequestException('ID ไม่ถูกต้อง');
-    }
-
     const category = await this.prisma.category.findUnique({ where: { id } });
     if (!category) {
       throw new NotFoundException('ไม่พบหมวดหมู่');
@@ -53,7 +50,7 @@ export class CategoriesService {
           deleted_at: null,
         },
       }),
-      this.prisma.category.count(),
+      this.prisma.category.count({ where: { deleted_at: null } }),
     ]);
 
     return {
@@ -91,16 +88,8 @@ export class CategoriesService {
     }
 
     if (imagePath && category.image) {
-      const imageFilename = category.image.replace('/uploads/categories/', '');
-      const imagePath = path.join(
-        process.cwd(),
-        'public',
-        'uploads',
-        'categories',
-        imageFilename,
-      );
-
-      fs.unlink(imagePath, () => {});
+      const relativePath = category.image.replace('/uploads/', '');
+      await deleteFile(relativePath);
     }
 
     try {
@@ -126,18 +115,9 @@ export class CategoriesService {
     }
 
     if (category.image) {
-      const imageFilename = category.image.replace('/uploads/categories/', '');
-      const imagePath = path.join(
-        process.cwd(),
-        'public',
-        'uploads',
-        'categories',
-        imageFilename,
-      );
-
-      fs.unlink(imagePath, () => {});
+      const relativePath = category.image.replace('/uploads/', '');
+      await deleteFile(relativePath);
     }
-
     await this.prisma.category.update({
       where: { id },
       data: { deleted_at: new Date() },

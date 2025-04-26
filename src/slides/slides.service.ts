@@ -4,7 +4,8 @@ import { CreateSlideDto } from './dto/create-slide.dto';
 import { UpdateSlideDto } from './dto/update-slide.dto';
 import * as path from 'path';
 import * as fs from 'fs';
-import { moveTempSlideImage } from 'utils/file.util';
+import { deleteFile, moveTempSlideImage } from 'utils/file.util';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SlidesService {
@@ -12,7 +13,7 @@ export class SlidesService {
 
   async findAll(page = 1, limit = 10, isActive?: string) {
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: Prisma.slidesWhereInput = {};
 
     if (isActive !== undefined) {
       where.is_active = isActive === 'true';
@@ -75,14 +76,16 @@ export class SlidesService {
       },
     });
 
-    const finalImages = imageUrls.map((img, index) => ({
-      url: moveTempSlideImage(img.url),
-      order_image: index,
-      slide_id: slide.id,
-    }));
+    const finalImages: Prisma.slide_imagesCreateManyInput[] = imageUrls.map(
+      (img, index) => ({
+        url: moveTempSlideImage(img.url),
+        order_image: index,
+        slide_id: slide.id,
+      }),
+    );
 
     await this.prisma.slide_images.createMany({
-      data: finalImages as any, // safe cast due to filtering above
+      data: finalImages,
     });
 
     return this.findOne(slide.id);
@@ -107,22 +110,20 @@ export class SlidesService {
     });
 
     if (imageUrls) {
+      // ลบรูปเก่า
+      await this.prisma.slide_images.deleteMany({ where: { slide_id: id } });
+
+      // map รูปใหม่
       const finalImages = imageUrls.map((img, index) => ({
-        id: img.id,
         url: moveTempSlideImage(img.url),
         order_image: index,
         slide_id: id,
       }));
 
-      await this.prisma.$transaction(
-        finalImages.map((img) =>
-          this.prisma.slide_images.upsert({
-            where: { id: img.id ?? 0 },
-            update: img,
-            create: img,
-          }),
-        ),
-      );
+      // create รูปใหม่ทั้งหมด
+      await this.prisma.slide_images.createMany({
+        data: finalImages,
+      });
     }
 
     return this.findOne(id);
@@ -137,24 +138,7 @@ export class SlidesService {
   async removeImage(id: number) {
     const image = await this.prisma.slide_images.findUnique({ where: { id } });
     if (!image) throw new NotFoundException('Image not found');
-
-    const filename = image.url.split('/').pop();
-    const filePath = path.join(
-      process.cwd(),
-      'public',
-      'uploads',
-      'slides',
-      filename!,
-    );
-
-    try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    } catch (err) {
-      console.warn('⚠️ Failed to delete image file:', err.message);
-    }
-
+    await deleteFile(image.url);
     await this.prisma.slide_images.delete({ where: { id } });
 
     return { message: 'Image removed successfully' };

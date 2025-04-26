@@ -14,18 +14,21 @@ import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { UserPayload } from 'types/auth/auth.services';
 
-interface AuthUser {
-  email: string;
-  role: string;
-}
 @Controller('auth')
 export class AuthController {
+  private readonly jwtSecret: string;
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.jwtSecret = this.configService.get<string>('JWT_SECRET')!;
+    if (!this.jwtSecret) {
+      throw new Error('JWT_SECRET is not defined in environment variables.');
+    }
+  }
 
   @Post('login')
   async login(
@@ -36,11 +39,10 @@ export class AuthController {
     const token = await this.authService.login(user);
     res.cookie('token', token.accessToken, {
       httpOnly: true,
-      //secure: process.env.NODE_ENV === 'production', // ✅ ใช้ https ใน production
       sameSite: 'lax',
       maxAge: 1000 * 60 * 5,
       path: '/',
-      secure: false, // ถ้า production ต้องเป็น true + https
+      secure: process.env.NODE_ENV === 'production',
     });
 
     res.cookie('refresh_token', token.refreshToken, {
@@ -48,7 +50,7 @@ export class AuthController {
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 วัน
       path: '/auth/refresh',
-      secure: false, // ถ้า production ต้องเป็น true + https
+      secure: process.env.NODE_ENV === 'production',
     });
     return { message: 'Login success' };
   }
@@ -66,7 +68,7 @@ export class AuthController {
 
     try {
       const payload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: this.configService.get('JWT_SECRET'),
+        secret: this.jwtSecret,
       });
 
       const newAccessToken = this.jwtService.sign(
@@ -76,7 +78,7 @@ export class AuthController {
           role: payload.role,
         },
         {
-          secret: this.configService.get('JWT_SECRET'),
+          secret: this.jwtSecret,
           expiresIn: '5m',
         },
       );
@@ -86,11 +88,12 @@ export class AuthController {
         httpOnly: true,
         sameSite: 'lax',
         maxAge: 1000 * 60 * 5,
-        secure: false, // ถ้า production ต้องเป็น true + https
+        secure: process.env.NODE_ENV === 'production',
       });
 
       return { message: 'Access token refreshed' };
     } catch (err) {
+      console.error('Refresh token error:', err.message);
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
@@ -102,7 +105,7 @@ export class AuthController {
 
     try {
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: this.configService.get('JWT_SECRET'),
+        secret: this.jwtSecret,
       });
 
       return {
@@ -113,8 +116,14 @@ export class AuthController {
         },
       };
     } catch {
-      return { user: null }; // ✅ token หมดอายุ ก็ไม่ error
+      return { user: null };
     }
+  }
+
+  @Post('profile')
+  @UseGuards(JwtAuthGuard)
+  getProfile(@Req() req: Request & { user: UserPayload }) {
+    return req.user;
   }
 
   @Post('logout')
@@ -122,22 +131,16 @@ export class AuthController {
     res.clearCookie('token', {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false, // ✅ อย่าลืมปรับ true เมื่อเป็น production
+      secure: process.env.NODE_ENV === 'production',
     });
 
     res.clearCookie('refresh_token', {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false,
-      path: '/auth/refresh', // ต้องระบุ path ให้ตรงกับที่ตั้งไว้
+      secure: process.env.NODE_ENV === 'production',
+      path: '/auth/refresh',
     });
 
     return { message: 'Logged out successfully' };
-  }
-
-  @Post('profile')
-  @UseGuards(JwtAuthGuard)
-  getProfile(@Req() req) {
-    return req.user;
   }
 }

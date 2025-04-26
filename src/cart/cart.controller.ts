@@ -7,12 +7,14 @@ import {
   Param,
   Delete,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { JwtPayload } from 'src/auth/type/jwt-payload.interface';
+import { JwtPayload } from 'types/auth/jwt-payload.interface';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { UpdateCartItemDto } from './dto/update-cart.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('cart')
@@ -40,15 +42,22 @@ export class CartController {
 
   @Patch('items/:id')
   updateCartItemQuantity(
-    @Param('id') id: number,
-    @Body('quantity') quantity: number,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCartItemDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.cartService.updateCartItemQuantity(id, quantity, user.userId);
+    return this.cartService.updateCartItemQuantity(
+      id,
+      dto.quantity,
+      user.userId,
+    );
   }
 
   @Delete('items/:id')
-  removeCartItem(@Param('id') id: number, @CurrentUser() user: JwtPayload) {
+  removeCartItem(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.cartService.removeCartItem(id, user.userId);
   }
 }

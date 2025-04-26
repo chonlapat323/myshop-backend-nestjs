@@ -1,11 +1,9 @@
-// File: src/slides/dto/update-slide.dto.ts
 import {
   IsBoolean,
   IsNotEmpty,
   IsOptional,
   IsString,
   ValidateNested,
-  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SlideImageDto } from './create-slide.dto';
