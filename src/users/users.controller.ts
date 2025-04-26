@@ -49,7 +49,7 @@ export class UserController {
   async getUserById(@Param('id', ParseIntPipe) id: number) {
     const member = await this.usersService.findUserById(id);
 
-    if (!member || member.role_id !== UserRole.ADMIN) {
+    if (!member || member.role_id !== UserRole.MEMBER) {
       throw new NotFoundException('Member not found');
     }
 
