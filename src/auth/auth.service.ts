@@ -26,6 +26,10 @@ export class AuthService {
   }
 
   async login(user: LoginUserPayload) {
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not defined in environment variables');
+    }
     const payload = {
       userId: user.id,
       email: user.email,
@@ -35,12 +39,12 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_SECRET'),
+      secret: jwtSecret,
       expiresIn: '5m',
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_SECRET'),
+      secret: jwtSecret,
       expiresIn: '7d',
     });
 

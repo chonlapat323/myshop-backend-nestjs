@@ -13,29 +13,34 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(): Promise<Order[]> {
-    const orders = await this.prisma.order.findMany({
-      orderBy: { created_at: 'desc' },
-      include: {
-        users: { select: { id: true, email: true } },
-        order_items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                product_image: {
-                  where: { is_main: true },
-                  take: 1,
+  async findPaginated(skip: number, limit: number) {
+    const [orders, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: {
+          users: { select: { id: true, email: true } },
+          order_items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  product_image: {
+                    where: { is_main: true },
+                    take: 1,
+                  },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
+      this.prisma.order.count(),
+    ]);
 
-    return orders.map((order) => ({
+    const mapped = orders.map((order) => ({
       id: order.id,
       order_number: order.order_number,
       total_price: Number(order.total_price),
@@ -66,7 +71,18 @@ export class OrdersService {
         phone_number: order.shipping_phone,
         state: order.shipping_state,
       },
+      user: {
+        id: order.users.id,
+        email: order.users.email,
+      },
     }));
+
+    return {
+      data: mapped,
+      total,
+      page: skip / limit + 1,
+      pageCount: Math.ceil(total / limit),
+    };
   }
 
   async findByUserId(userId: number): Promise<Order[]> {

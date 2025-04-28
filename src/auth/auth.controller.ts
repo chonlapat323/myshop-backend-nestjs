@@ -79,7 +79,7 @@ export class AuthController {
         {
           userId: payload.userId,
           email: payload.email,
-          role: payload.role_id,
+          role_id: payload.role_id,
           name: payload.name,
           image_url: payload.image_url,
         },
