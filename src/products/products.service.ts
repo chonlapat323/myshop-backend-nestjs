@@ -48,6 +48,9 @@ export class ProductsService {
       this.prisma.products.findMany({
         skip,
         take: limit,
+        where: {
+          deleted_at: null,
+        },
         orderBy: { created_at: 'desc' },
         include: {
           product_image: true,
@@ -76,7 +79,7 @@ export class ProductsService {
 
   async findBestSellers() {
     const data = await this.prisma.products.findMany({
-      where: { is_best_seller: true },
+      where: { is_best_seller: true, deleted_at: null, is_active: true },
       orderBy: { updated_at: 'desc' },
       take: 4,
       include: {
@@ -157,7 +160,7 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto) {
-    const { tags, variants, imageUrls = [], ...productData } = dto;
+    const { tags, variants, image_urls = [], ...productData } = dto;
 
     const tagUpserts =
       tags?.map((name) =>
@@ -170,7 +173,7 @@ export class ProductsService {
 
     const createdTags = await this.prisma.$transaction(tagUpserts);
 
-    const finalImages = imageUrls.map((url, i) => ({
+    const finalImages = image_urls.map((url, i) => ({
       url: moveTempProductImage(url.url),
       is_main: i === 0,
       order_image: i,
@@ -192,9 +195,9 @@ export class ProductsService {
     const product = await this.prisma.products.findUnique({ where: { id } });
     if (!product) throw new NotFoundException('Product not found');
 
-    const { variants, imageUrls, tags, ...rest } = dto;
+    const { variants, image_urls, tags, ...rest } = dto;
 
-    const finalImages = imageUrls!.map((img, i) => ({
+    const finalImages = image_urls!.map((img, i) => ({
       id: img.id,
       url: moveTempProductImage(img.url),
       productId: id,

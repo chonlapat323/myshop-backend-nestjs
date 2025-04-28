@@ -1,5 +1,7 @@
 export type ValidatedUser = {
-  id: number;
+  userId: number;
   email: string;
-  role: string;
+  role_id: string;
+  name?: string;
+  image_url?: string;
 };

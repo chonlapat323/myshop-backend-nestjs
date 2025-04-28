@@ -12,6 +12,7 @@ import { category as Category } from '@prisma/client';
 import * as path from 'path';
 import * as fs from 'fs';
 import { deleteFile } from 'utils/file.util';
+import { handlePrismaError } from 'src/common/prisma-error-handler';
 
 @Injectable()
 export class CategoriesService {
@@ -69,11 +70,9 @@ export class CategoriesService {
           image,
         },
       });
-    } catch (error: any) {
-      if (error.code === 'P2002') {
-        throw new ConflictException('ชื่อหมวดหมู่มีอยู่แล้ว');
-      }
-      throw new InternalServerErrorException('ไม่สามารถเพิ่มหมวดหมู่ได้');
+    } catch (error) {
+      handlePrismaError(error);
+      throw error;
     }
   }
 

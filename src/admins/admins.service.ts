@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateAdminDto } from './dto/create-admins.dto';
 import { UpdateAdminDto } from './dto/update-admins.dto';
 import * as bcrypt from 'bcrypt';
@@ -6,6 +10,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma, users as User } from '@prisma/client';
 import { UserRole } from 'src/constants/user-role.enum';
 import { deleteFile } from 'utils/file.util';
+import { handlePrismaError } from 'src/common/prisma-error-handler';
 
 @Injectable()
 export class AdminsService {
@@ -17,7 +22,7 @@ export class AdminsService {
 
   async findAll(): Promise<User[]> {
     return this.prisma.users.findMany({
-      where: { role_id: UserRole.ADMIN }, // สมมุติ admin คือ role_id = 1
+      where: { role_id: UserRole.ADMIN },
     });
   }
 
@@ -32,7 +37,12 @@ export class AdminsService {
       role_id: UserRole.ADMIN, // สมมุติ admin
     };
 
-    return this.prisma.users.create({ data });
+    try {
+      return await this.prisma.users.create({ data });
+    } catch (error) {
+      handlePrismaError(error);
+      throw error;
+    }
   }
 
   async update(
@@ -58,10 +68,15 @@ export class AdminsService {
       updateData.hashed_password = await bcrypt.hash(password, 10);
     }
 
-    return this.prisma.users.update({
-      where: { id: id_ },
-      data: updateData,
-    });
+    try {
+      return await this.prisma.users.update({
+        where: { id: id_ },
+        data: updateData,
+      });
+    } catch (error) {
+      handlePrismaError(error);
+      throw error;
+    }
   }
 
   async remove(id: number): Promise<{ message: string }> {

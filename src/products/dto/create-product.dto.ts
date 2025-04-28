@@ -49,7 +49,7 @@ export class CreateProductDto {
   @IsOptional()
   @Transform(({ value }) => parseFloat(value))
   @IsNumber()
-  discountPrice?: number;
+  discount_price?: number;
 
   @Transform(({ value }) => parseInt(value, 10))
   @IsNumber()
@@ -72,7 +72,7 @@ export class CreateProductDto {
 
   @IsOptional()
   @IsString()
-  additionalInformation?: string;
+  additional_information?: string;
 
   @IsOptional()
   @IsString()
@@ -90,7 +90,7 @@ export class CreateProductDto {
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => ImageUrlDto)
-  imageUrls?: ImageUrlDto[];
+  image_urls?: ImageUrlDto[];
 
   @IsOptional()
   @ValidateNested({ each: true })

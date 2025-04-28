@@ -15,10 +15,14 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { UserPayload } from 'types/auth/auth.services';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { JwtPayload } from 'types/auth/jwt-payload.interface';
+import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
   private readonly jwtSecret: string;
+
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
@@ -32,15 +36,18 @@ export class AuthController {
 
   @Post('login')
   async login(
-    @Body() body: { email: string; password: string },
+    @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.validateUser(body.email, body.password);
     const token = await this.authService.login(user);
+    const FIVE_MINUTES = 1000 * 60 * 5;
+    const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
+
     res.cookie('token', token.accessToken, {
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 1000 * 60 * 5,
+      maxAge: FIVE_MINUTES,
       path: '/',
       secure: process.env.NODE_ENV === 'production',
     });
@@ -48,7 +55,7 @@ export class AuthController {
     res.cookie('refresh_token', token.refreshToken, {
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 วัน
+      maxAge: SEVEN_DAYS,
       path: '/auth/refresh',
       secure: process.env.NODE_ENV === 'production',
     });
@@ -61,9 +68,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken = req.cookies['refresh_token'];
-    console.log('🔁 Refresh token: ', refreshToken);
-    console.log('🧠 Payload from token: ', req.cookies['token']);
-    console.log('✅ New access token issued');
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
 
     try {
@@ -73,9 +77,11 @@ export class AuthController {
 
       const newAccessToken = this.jwtService.sign(
         {
-          id: payload.id,
+          userId: payload.userId,
           email: payload.email,
-          role: payload.role,
+          role: payload.role_id,
+          name: payload.name,
+          image_url: payload.image_url,
         },
         {
           secret: this.jwtSecret,
@@ -83,7 +89,6 @@ export class AuthController {
         },
       );
 
-      // ส่ง access token ใหม่กลับไปใน cookie
       res.cookie('token', newAccessToken, {
         httpOnly: true,
         sameSite: 'lax',
@@ -98,26 +103,18 @@ export class AuthController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('status')
-  async getStatus(@Req() req: Request) {
-    const token = req.cookies['token'];
-    if (!token) return { user: null };
-
-    try {
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: this.jwtSecret,
-      });
-
-      return {
-        user: {
-          id: payload.id,
-          email: payload.email,
-          role: payload.role,
-        },
-      };
-    } catch {
-      return { user: null };
-    }
+  getStatus(@CurrentUser() user: JwtPayload) {
+    return {
+      user: {
+        id: user.userId,
+        email: user.email,
+        role: user.role_id,
+        name: user.name,
+        image_url: user.image_url,
+      },
+    };
   }
 
   @Post('profile')

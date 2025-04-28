@@ -207,7 +207,7 @@ export class OrdersService {
         product_name: product.name,
         quantity: item.quantity,
         price,
-        discount_price: product.discountPrice,
+        discount_price: product.discount_price,
       };
     });
 
