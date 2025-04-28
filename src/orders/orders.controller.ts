@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -29,13 +30,21 @@ export class OrdersController {
   }
 
   @Get('admin')
-  async findAllOrders(@CurrentUser() user: JwtPayload): Promise<Order[]> {
+  async findAllOrders(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ): Promise<{ data: Order[]; total: number }> {
     if (user.role_id !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'You are not allowed to access admin orders',
       );
     }
-    return this.ordersService.findAll();
+    const parsedPage = Number(page) || 1;
+    const parsedLimit = Number(limit) || 10;
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    return this.ordersService.findPaginated(skip, parsedLimit);
   }
 
   @Get(':id')

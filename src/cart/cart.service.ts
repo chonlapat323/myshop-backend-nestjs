@@ -73,7 +73,7 @@ export class CartService {
         product_id: productId,
         quantity,
         price_snapshot: product.price,
-        discount_snapshot: product.discountPrice ?? null,
+        discount_snapshot: product.discount_price ?? null,
       },
     });
   }

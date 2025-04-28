@@ -96,7 +96,7 @@ model category {
   description String?    @db.VarChar
   image       String?    @db.VarChar
   is_active   Boolean    @default(true)
-  link        String?    @db.VarChar
+  link        String?    @unique
   created_at  DateTime   @default(now()) @db.Timestamptz(6)
   deleted_at  DateTime?  @db.Timestamp(6)
   products    products[]
@@ -107,12 +107,12 @@ model products {
   name                  String               @db.VarChar
   description           String
   price                 Decimal              @db.Decimal(10, 2)
-  discountPrice         Decimal?             @db.Decimal(10, 2)
+  discount_price         Decimal?             @db.Decimal(10, 2)
   stock                 Int
   sku                   String               @db.VarChar
   brand                 String               @db.VarChar
   soldCount             Int                  @default(0)
-  additionalInformation String?
+  additional_information String?
   design                String?
   is_active             Boolean              @default(true)
   is_best_seller        Boolean              @default(false)
