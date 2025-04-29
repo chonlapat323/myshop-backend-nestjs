@@ -25,8 +25,15 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  async findMyOrders(@CurrentUser() user: JwtPayload): Promise<Order[]> {
-    return this.ordersService.findByUserId(user.userId);
+  async findMyOrders(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    const pageNumber = Number(page);
+    const pageSize = Number(limit);
+
+    return this.ordersService.findByUserId(user.userId, pageNumber, pageSize);
   }
 
   @Get('admin')

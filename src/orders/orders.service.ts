@@ -85,32 +85,46 @@ export class OrdersService {
     };
   }
 
-  async findByUserId(userId: number): Promise<Order[]> {
-    const orders = await this.prisma.order.findMany({
-      where: {
-        userId,
-        order_status: {
-          not: OrderStatus.cancelled,
+  async findByUserId(userId: number, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+
+    const [orders, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where: {
+          userId,
+          order_status: {
+            not: OrderStatus.cancelled,
+          },
         },
-      },
-      orderBy: { created_at: 'desc' },
-      include: {
-        order_items: {
-          include: {
-            product: {
-              include: {
-                product_image: {
-                  where: { is_main: true },
-                  take: 1,
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: {
+          order_items: {
+            include: {
+              product: {
+                include: {
+                  product_image: {
+                    where: { is_main: true },
+                    take: 1,
+                  },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
+      this.prisma.order.count({
+        where: {
+          userId,
+          order_status: {
+            not: OrderStatus.cancelled,
+          },
+        },
+      }),
+    ]);
 
-    return orders.map((order) => ({
+    const mapped = orders.map((order) => ({
       id: order.id,
       order_number: order.order_number,
       total_price: Number(order.total_price),
@@ -142,6 +156,13 @@ export class OrdersService {
         state: order.shipping_state,
       },
     }));
+
+    return {
+      data: mapped,
+      total,
+      page,
+      pageCount: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: number): Promise<Order> {
