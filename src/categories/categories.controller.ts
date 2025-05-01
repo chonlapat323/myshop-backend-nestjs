@@ -37,11 +37,17 @@ export class CategoriesController {
 
   @Get('paginated')
   async findPaginated(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('search') search = '',
+    @Query('isActive') isActive?: string,
   ) {
-    const skip = (page - 1) * limit;
-    return this.categoriesService.findPaginated(limit, skip);
+    return this.categoriesService.findPaginated({
+      page: Number(page),
+      limit: Number(limit),
+      search,
+      isActive,
+    });
   }
 
   @Get(':id')

@@ -41,17 +41,27 @@ export class OrdersController {
     @CurrentUser() user: JwtPayload,
     @Query('page') page = 1,
     @Query('limit') limit = 10,
-  ): Promise<{ data: Order[]; total: number }> {
+    @Query('search') search = '',
+  ): Promise<{
+    data: Order[];
+    total: number;
+    page: number;
+    pageCount: number;
+  }> {
     if (user.role_id !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'You are not allowed to access admin orders',
       );
     }
+
     const parsedPage = Number(page) || 1;
     const parsedLimit = Number(limit) || 10;
-    const skip = (parsedPage - 1) * parsedLimit;
 
-    return this.ordersService.findPaginated(skip, parsedLimit);
+    return this.ordersService.findPaginated({
+      page: parsedPage,
+      limit: parsedLimit,
+      search,
+    });
   }
 
   @Get(':id')

@@ -15,25 +15,68 @@ import { deleteFile } from 'utils/file.util';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findUsers({ role, page }: { role?: string; page: number }) {
-    const take = 10;
-    const skip = (page - 1) * take;
+  async findUsers({
+    role,
+    page,
+    limit,
+    search,
+  }: {
+    role: string;
+    page: number;
+    limit: number;
+    search: string;
+  }) {
+    const skip = (page - 1) * limit;
 
-    const where = role ? { role_id: String(UserRoleMap[role]) } : {};
+    const roleWhere = role ? { role_id: String(UserRoleMap[role]) } : {};
 
-    const [items, count] = await this.prisma.$transaction([
+    const where: Prisma.usersWhereInput = search
+      ? {
+          AND: [
+            { ...roleWhere },
+            {
+              OR: [
+                {
+                  first_name: {
+                    contains: search,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+                {
+                  last_name: {
+                    contains: search,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+                {
+                  email: {
+                    contains: search,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+              ],
+            },
+          ],
+        }
+      : {
+          ...roleWhere,
+        };
+
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.users.findMany({
         where,
         skip,
-        take,
+        take: limit,
         orderBy: { created_at: 'desc' },
       }),
       this.prisma.users.count({ where }),
     ]);
 
     return {
-      items,
-      totalPages: Math.ceil(count / take),
+      data,
+      total,
+      page,
+      pageCount: Math.ceil(total / limit),
     };
   }
 

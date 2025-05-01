@@ -35,9 +35,21 @@ export class UserController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  async findUsers(@Query('role') role: string, @Query('page') page: string) {
-    const pageNumber = parseInt(page) || 1;
-    return this.usersService.findUsers({ role, page: pageNumber });
+  async findUsers(
+    @Query('role') role: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+    @Query('search') search = '',
+  ) {
+    const pageNumber = parseInt(page, 10) || 1;
+    const limitNumber = parseInt(limit, 10) || 10;
+
+    return this.usersService.findUsers({
+      role,
+      page: pageNumber,
+      limit: limitNumber,
+      search,
+    });
   }
 
   @Get('me')

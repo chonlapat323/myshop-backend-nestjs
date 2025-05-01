@@ -1,16 +1,8 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { category as Category } from '@prisma/client';
-import * as path from 'path';
-import * as fs from 'fs';
+import { category as Category, Prisma } from '@prisma/client';
 import { deleteFile } from 'utils/file.util';
 import { handlePrismaError } from 'src/common/prisma-error-handler';
 
@@ -41,23 +33,46 @@ export class CategoriesService {
     return category;
   }
 
-  async findPaginated(limit: number, skip: number) {
+  async findPaginated({
+    page,
+    limit,
+    search,
+    isActive,
+  }: {
+    page: number;
+    limit: number;
+    search: string;
+    isActive?: string;
+  }) {
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.categoryWhereInput = {
+      deleted_at: null,
+      ...(isActive !== undefined && {
+        is_active: isActive === 'true',
+      }),
+      ...(search && {
+        name: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      }),
+    };
+
     const [data, total] = await this.prisma.$transaction([
       this.prisma.category.findMany({
+        where,
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
-        where: {
-          deleted_at: null,
-        },
       }),
-      this.prisma.category.count({ where: { deleted_at: null } }),
+      this.prisma.category.count({ where }),
     ]);
 
     return {
       data,
       total,
-      page: skip / limit + 1,
+      page,
       pageCount: Math.ceil(total / limit),
     };
   }
@@ -100,10 +115,8 @@ export class CategoriesService {
         },
       });
     } catch (error: any) {
-      if (error.code === 'P2002') {
-        throw new ConflictException('ชื่อหมวดหมู่ซ้ำ');
-      }
-      throw new InternalServerErrorException('ไม่สามารถแก้ไขหมวดหมู่ได้');
+      handlePrismaError(error);
+      throw error;
     }
   }
 

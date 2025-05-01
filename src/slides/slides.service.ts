@@ -11,15 +11,42 @@ import { Prisma } from '@prisma/client';
 export class SlidesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page = 1, limit = 10, isActive?: string) {
+  async findAll({
+    page,
+    limit,
+    search,
+    isActive,
+  }: {
+    page: number;
+    limit: number;
+    search: string;
+    isActive?: string;
+  }) {
     const skip = (page - 1) * limit;
-    const where: Prisma.slidesWhereInput = {};
 
-    if (isActive !== undefined) {
-      where.is_active = isActive === 'true';
-    }
+    const where: Prisma.slidesWhereInput = {
+      ...(isActive !== undefined && {
+        is_active: isActive === 'true',
+      }),
+      ...(search && {
+        OR: [
+          {
+            title: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            description: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      }),
+    };
 
-    const [slides, total] = await this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.slides.findMany({
         where,
         skip,
@@ -33,10 +60,10 @@ export class SlidesService {
     ]);
 
     return {
-      data: slides,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalItems: total,
+      data,
+      total,
+      page,
+      pageCount: Math.ceil(total / limit),
     };
   }
 
