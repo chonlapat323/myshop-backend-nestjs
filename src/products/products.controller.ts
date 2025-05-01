@@ -25,18 +25,40 @@ export class ProductsController {
   constructor(private readonly productService: ProductsService) {}
 
   @Get()
-  findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
-    const skip = (page - 1) * limit;
-    return this.productService.findPaginated(+limit, +skip);
+  findAll(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('search') search: string = '',
+  ) {
+    const parsedPage = Number(page) || 1;
+    const parsedLimit = Number(limit) || 10;
+
+    return this.productService.findPaginated({
+      page: parsedPage,
+      limit: parsedLimit,
+      search,
+    });
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('paginated')
   async findPaginated(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('search') search: string = '',
+    @Query('category_id') category_id?: string,
+    @Query('is_active') is_active?: string,
   ) {
-    const skip = (page - 1) * limit;
-    return this.productService.findPaginated(limit, skip);
+    const parsedPage = Number(page) || 1;
+    const parsedLimit = Number(limit) || 10;
+
+    return this.productService.findPaginated({
+      page: parsedPage,
+      limit: parsedLimit,
+      search,
+      category_id,
+      is_active,
+    });
   }
 
   @Get('best-sellers')

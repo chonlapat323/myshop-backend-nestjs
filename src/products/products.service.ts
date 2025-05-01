@@ -43,16 +43,85 @@ export class ProductsService {
     };
   }
 
-  async findPaginated(limit: number, skip: number) {
+  async findPaginated({
+    page,
+    limit,
+    search,
+    category_id,
+    is_active,
+  }: {
+    page: number;
+    limit: number;
+    search: string;
+    category_id?: string;
+    is_active?: string;
+  }) {
+    const skip = (page - 1) * limit;
+    const priceNumber = Number(search);
+    const isPriceNumber = !isNaN(priceNumber);
+
+    const orConditions: Prisma.productsWhereInput[] = [];
+
+    if (search) {
+      orConditions.push(
+        {
+          name: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          category: {
+            name: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          products_tags_tags: {
+            some: {
+              tags: {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+        },
+      );
+
+      if (isPriceNumber) {
+        orConditions.push({
+          price: {
+            equals: priceNumber,
+          },
+        });
+      }
+    }
+
+    const where: Prisma.productsWhereInput = {
+      deleted_at: null,
+      ...(search && {
+        OR: orConditions,
+      }),
+      ...(category_id && {
+        category_id: Number(category_id),
+      }),
+      ...(is_active !== undefined && {
+        is_active: is_active === 'true',
+      }),
+    };
+
     const [data, total] = await this.prisma.$transaction([
       this.prisma.products.findMany({
         skip,
         take: limit,
-        where: {
-          deleted_at: null,
-        },
+        where,
         orderBy: { created_at: 'desc' },
         include: {
+          category: true,
           product_image: true,
           products_tags_tags: {
             include: {
@@ -61,7 +130,7 @@ export class ProductsService {
           },
         },
       }),
-      this.prisma.products.count(),
+      this.prisma.products.count({ where }),
     ]);
 
     const mapped = data.map((product) => ({
@@ -72,7 +141,7 @@ export class ProductsService {
     return {
       data: mapped,
       total,
-      page: skip / limit + 1,
+      page,
       pageCount: Math.ceil(total / limit),
     };
   }

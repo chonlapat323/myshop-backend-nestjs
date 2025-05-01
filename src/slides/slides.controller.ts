@@ -28,11 +28,17 @@ export class SlidesController {
 
   @Get()
   findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
+    @Query('page', ParseIntPipe) page = 1,
+    @Query('limit', ParseIntPipe) limit = 10,
+    @Query('search') search = '',
     @Query('is_active') isActive?: string,
   ) {
-    return this.slidesService.findAll(+page, +limit, isActive);
+    return this.slidesService.findAll({
+      page,
+      limit,
+      search,
+      isActive,
+    });
   }
 
   @Get('default')

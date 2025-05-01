@@ -13,12 +13,48 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
-  async findPaginated(skip: number, limit: number) {
+  async findPaginated({
+    page,
+    limit,
+    search,
+  }: {
+    page: number;
+    limit: number;
+    search: string;
+  }) {
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.orderWhereInput = {
+      ...(search && {
+        OR: [
+          {
+            order_number: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            tracking_number: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+          {
+            shipping_full_name: {
+              contains: search,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      }),
+    };
+
     const [orders, total] = await this.prisma.$transaction([
       this.prisma.order.findMany({
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
+        where,
         include: {
           users: { select: { id: true, email: true } },
           order_items: {
@@ -37,7 +73,7 @@ export class OrdersService {
           },
         },
       }),
-      this.prisma.order.count(),
+      this.prisma.order.count({ where }),
     ]);
 
     const mapped = orders.map((order) => ({
@@ -80,7 +116,7 @@ export class OrdersService {
     return {
       data: mapped,
       total,
-      page: skip / limit + 1,
+      page,
       pageCount: Math.ceil(total / limit),
     };
   }
