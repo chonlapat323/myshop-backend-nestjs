@@ -4,21 +4,27 @@ FROM node:20-alpine
 # 2. Set working directory
 WORKDIR /app
 
-# 3. Copy package files and install dependencies
+# 3. Copy package files
 COPY package*.json ./
+
+# 4. Install dependencies
 RUN npm install
 
-# 4. Copy the rest of your app
+# 5. Copy source code
 COPY . .
 
-# 5. Build the app
+# ✅ 6. Generate Prisma client
+RUN npx prisma generate
+
+# 7. Build NestJS
 RUN npm run build
 
-# 6. Expose port
+# 8. Expose port
 EXPOSE 3000
 
-# 7. Start the app
-CMD ["node", "dist/main"]
+# 9. Start app
+CMD ["node", "dist/src/main.js"]
+
 
 
 # FROM node:20
