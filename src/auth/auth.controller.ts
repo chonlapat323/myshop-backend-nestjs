@@ -39,7 +39,10 @@ export class AuthController {
     @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
+    console.log(body.email);
+    console.log(body.password);
     const user = await this.authService.validateUser(body.email, body.password);
+    console.log(user);
     const token = await this.authService.login(user);
     const FIVE_MINUTES = 1000 * 60 * 5;
     const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;

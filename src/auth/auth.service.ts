@@ -27,6 +27,7 @@ export class AuthService {
 
   async login(user: LoginUserPayload) {
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    console.log(`jwtSecret::${jwtSecret}`);
     if (!jwtSecret) {
       throw new Error('JWT_SECRET is not defined in environment variables');
     }
