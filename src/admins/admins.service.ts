@@ -5,9 +5,9 @@ import {
 } from '@nestjs/common';
 import { CreateAdminDto } from './dto/create-admins.dto';
 import { UpdateAdminDto } from './dto/update-admins.dto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma, users as User } from '@prisma/client';
+import { Prisma, Users as User } from '@prisma/client';
 import { UserRole } from 'src/constants/user-role.enum';
 import { deleteFile } from 'utils/file.util';
 import { handlePrismaError } from 'src/common/prisma-error-handler';
@@ -30,7 +30,7 @@ export class AdminsService {
     const { password, confirm_password, ...safeData } = dto;
     const hashedPassword = await bcrypt.hash(dto.password!, 10);
 
-    const data: Prisma.usersCreateInput = {
+    const data: Prisma.UsersCreateInput = {
       ...safeData,
       hashed_password: hashedPassword,
       avatar_url: avatarUrl ?? null,
@@ -57,7 +57,7 @@ export class AdminsService {
 
     const { password, id, ...safeData } = dto;
 
-    const updateData: Prisma.usersUpdateInput = {
+    const updateData: Prisma.UsersUpdateInput = {
       ...safeData,
       ...(avatarFilename
         ? { avatar_url: `/uploads/users/${avatarFilename}` }

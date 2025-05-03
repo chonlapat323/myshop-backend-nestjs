@@ -4,9 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma, users as PrismaUser } from '@prisma/client';
+import { Prisma, Users as PrismaUser } from '@prisma/client';
 import { UserRole, UserRoleMap } from 'src/constants/user-role.enum';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { deleteFile } from 'utils/file.util';
@@ -30,7 +30,7 @@ export class UsersService {
 
     const roleWhere = role ? { role_id: String(UserRoleMap[role]) } : {};
 
-    const where: Prisma.usersWhereInput = search
+    const where: Prisma.UsersWhereInput = search
       ? {
           AND: [
             { ...roleWhere },
@@ -134,9 +134,9 @@ export class UsersService {
 
     const safeDataWithoutId = Object.fromEntries(
       Object.entries(safeData).filter(([key]) => key !== 'id'),
-    ) as Prisma.usersUpdateInput;
+    ) as Prisma.UsersUpdateInput;
 
-    const data: Prisma.usersUpdateInput = {
+    const data: Prisma.UsersUpdateInput = {
       ...safeDataWithoutId,
       ...(avatarFilename
         ? { avatar_url: `/uploads/users/${avatarFilename}` }

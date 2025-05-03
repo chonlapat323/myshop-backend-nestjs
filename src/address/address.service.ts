@@ -7,7 +7,7 @@ import {
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { addresses as PrismaAddress } from '@prisma/client';
+import { Addresses as PrismaAddress } from '@prisma/client';
 
 @Injectable()
 export class AddressService {
