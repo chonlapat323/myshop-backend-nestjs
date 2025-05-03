@@ -28,8 +28,11 @@ export function moveTempProductImage(originalUrl: string): string {
     'products',
     filename,
   );
-
+  const slidesDir = path.join(process.cwd(), 'public', 'uploads', 'products');
   if (fs.existsSync(tempPath)) {
+    if (!fs.existsSync(slidesDir)) {
+      fs.mkdirSync(slidesDir, { recursive: true });
+    }
     fs.renameSync(tempPath, finalPath);
     return `/uploads/products/${filename}`;
   }
