@@ -24,7 +24,7 @@ export class OrdersService {
   }) {
     const skip = (page - 1) * limit;
 
-    const where: Prisma.orderWhereInput = {
+    const where: Prisma.OrderWhereInput = {
       ...(search && {
         OR: [
           {
@@ -56,7 +56,7 @@ export class OrdersService {
         orderBy: { created_at: 'desc' },
         where,
         include: {
-          users: { select: { id: true, email: true } },
+          Users: { select: { id: true, email: true } },
           order_items: {
             include: {
               product: {
@@ -107,9 +107,9 @@ export class OrdersService {
         phone_number: order.shipping_phone,
         state: order.shipping_state,
       },
-      user: {
-        id: order.users.id,
-        email: order.users.email,
+      User: {
+        id: order.Users.id,
+        email: order.Users.email,
       },
     }));
 
@@ -205,7 +205,7 @@ export class OrdersService {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: {
-        users: { select: { id: true, email: true } },
+        Users: { select: { id: true, email: true } },
         order_items: {
           include: {
             product: {
@@ -234,7 +234,7 @@ export class OrdersService {
       order_status: order.order_status,
       created_at: order.created_at.toISOString(),
       tracking_number: order.tracking_number ?? undefined,
-      user_name: order.users?.email ?? null,
+      user_name: order.Users?.email ?? null,
       items: order.order_items.map((item) => ({
         id: item.id,
         product_name: item.product_name,

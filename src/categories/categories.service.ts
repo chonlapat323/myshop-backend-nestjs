@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { category as Category, Prisma } from '@prisma/client';
+import { Category as Category, Prisma } from '@prisma/client';
 import { deleteFile } from 'utils/file.util';
 import { handlePrismaError } from 'src/common/prisma-error-handler';
 
@@ -46,7 +46,7 @@ export class CategoriesService {
   }) {
     const skip = (page - 1) * limit;
 
-    const where: Prisma.categoryWhereInput = {
+    const where: Prisma.CategoryWhereInput = {
       deleted_at: null,
       ...(isActive !== undefined && {
         is_active: isActive === 'true',

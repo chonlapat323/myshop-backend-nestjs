@@ -24,7 +24,7 @@ export class SlidesService {
   }) {
     const skip = (page - 1) * limit;
 
-    const where: Prisma.slidesWhereInput = {
+    const where: Prisma.SlidesWhereInput = {
       ...(isActive !== undefined && {
         is_active: isActive === 'true',
       }),
@@ -103,7 +103,7 @@ export class SlidesService {
       },
     });
 
-    const finalImages: Prisma.slide_imagesCreateManyInput[] = imageUrls.map(
+    const finalImages: Prisma.Slide_imagesCreateManyInput[] = imageUrls.map(
       (img, index) => ({
         url: moveTempSlideImage(img.url),
         order_image: index,

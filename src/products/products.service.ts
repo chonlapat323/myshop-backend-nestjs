@@ -60,7 +60,7 @@ export class ProductsService {
     const priceNumber = Number(search);
     const isPriceNumber = !isNaN(priceNumber);
 
-    const orConditions: Prisma.productsWhereInput[] = [];
+    const orConditions: Prisma.ProductsWhereInput[] = [];
 
     if (search) {
       orConditions.push(
@@ -101,7 +101,7 @@ export class ProductsService {
       }
     }
 
-    const where: Prisma.productsWhereInput = {
+    const where: Prisma.ProductsWhereInput = {
       deleted_at: null,
       ...(search && {
         OR: orConditions,

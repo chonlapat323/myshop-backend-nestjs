@@ -23,7 +23,7 @@ import { editFileName, imageFileFilter } from '../common/utils/file-upload';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { Request } from 'express';
-import { users as User } from '@prisma/client';
+import { Users as User } from '@prisma/client';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('admins')
