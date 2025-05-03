@@ -18,6 +18,7 @@ export class AuthService {
     password: string,
   ): Promise<LoginUserPayload> {
     const user = await this.usersService.findByEmail(email);
+    console.log(`find user:${user}`);
     if (user && (await bcrypt.compare(password, user.hashed_password!))) {
       const { hashed_password, ...result } = user;
       return result;
