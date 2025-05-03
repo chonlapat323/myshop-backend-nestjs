@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model users {
+model Users {
   id              Int             @id @default(autoincrement())
   first_name      String?         @db.VarChar
   last_name       String?         @db.VarChar
@@ -21,13 +21,14 @@ model users {
   created_at      DateTime        @default(now()) @db.Timestamptz(6)
   updated_at      DateTime        @default(now()) @db.Timestamptz(6)
   last_login      DateTime?       @db.Timestamptz(6)
-  addresses       addresses[]
-  cart            cart[]
-  order           order[]
+  Addresses       Addresses[]
+  cart            Cart[]
+  Order           Order[]
   payment_method  PaymentMethod[]
+  @@map("users")
 }
 
-model addresses {
+model Addresses {
   id           Int      @id @default(autoincrement())
   full_name    String   @db.VarChar
   address_line String   @db.VarChar
@@ -39,10 +40,11 @@ model addresses {
   user_id      Int
   created_at   DateTime @default(now()) @db.Timestamp(6)
   updated_at   DateTime @default(now()) @updatedAt @db.Timestamp(6)
-  users        users    @relation(fields: [user_id], references: [id])
+  Users        Users    @relation(fields: [user_id], references: [id])
+   @@map("addresses")
 }
 
-model order {
+model Order {
   id                     Int      @id @default(autoincrement())
   order_number           String   @unique(map: "UQ_f9180f384353c621e8d0c414c14") @db.VarChar
   subtotal_price         Decimal  @db.Decimal
@@ -63,10 +65,11 @@ model order {
   created_at             DateTime @default(now()) @db.Timestamp(6)
   updated_at             DateTime @default(now()) @db.Timestamp(6)
   userId                 Int
-  users                  users    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_caabe91507b3379c7ba73637b84")
-  order_items            order_items[]
+  Users                  Users    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_caabe91507b3379c7ba73637b84")
+  order_items            Order_items[]
   order_status           OrderStatus @default(pending)
   tracking_number        String?
+  @@map("orders")
 }
 
 enum OrderStatus {
@@ -76,12 +79,12 @@ enum OrderStatus {
   cancelled
 }
 
-model order_items {
+model Order_items {
   id                Int      @id @default(autoincrement())
   orderId           Int
   productId         Int
-  product    products       @relation(fields: [productId], references: [id])
-  order      order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Products       @relation(fields: [productId], references: [id])
+  Order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product_name      String  @db.VarChar
   price             Decimal @db.Decimal(10, 2)
   discount_price    Decimal?  @db.Decimal(10, 2)
@@ -90,7 +93,7 @@ model order_items {
   @@map("order_items")
 }
 
-model category {
+model Category {
   id          Int        @id(map: "PK_9c4e4a89e3674fc9f382d733f03") @default(autoincrement())
   name        String     @unique(map: "UQ_23c05c292c439d77b0de816b500") @db.VarChar
   description String?    @db.VarChar
@@ -99,10 +102,11 @@ model category {
   link        String?    @unique
   created_at  DateTime   @default(now()) @db.Timestamptz(6)
   deleted_at  DateTime?  @db.Timestamp(6)
-  products    products[]
+  products    Products[]
+  @@map("category")
 }
 
-model products {
+model Products {
   id                    Int                  @id(map: "PK_0806c755e0aca124e67c0cf6d7d") @default(autoincrement())
   name                  String               @db.VarChar
   description           String
@@ -120,68 +124,75 @@ model products {
   updated_at            DateTime             @default(now()) @db.Timestamp(6)
   deleted_at            DateTime?            @db.Timestamp(6)
   category_id           Int?
-  cart_item             cart_item[]
-  product_image         product_image[]
-  category              category?            @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "FK_9a5f6868c96e0069e699f33e124")
-  products_tags_tags    products_tags_tags[]
-  variants              variants[]
-  order_items           order_items[]
+  cart_item             Cart_item[]
+  product_image         Product_image[]
+  category              Category?            @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "FK_9a5f6868c96e0069e699f33e124")
+  products_tags_tags    Products_tags_tags[]
+  variants              Variants[]
+  order_items           Order_items[]
+  @@map("products")
 }
 
-model product_image {
+model Product_image {
   id          Int      @id(map: "PK_99d98a80f57857d51b5f63c8240") @default(autoincrement())
   url         String   @db.VarChar
   is_main     Boolean  @default(false)
   productId   Int
   order_image Int
-  products    products @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_40ca0cd115ef1ff35351bed8da2")
+  products    Products @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_40ca0cd115ef1ff35351bed8da2")
+  @@map("product_image")
 }
 
-model products_tags_tags {
+model Products_tags_tags {
   productsId Int
   tagsId     Int
-  tags       tags     @relation(fields: [tagsId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_72fa6ba0f176a89a2e9d90274c5")
-  products   products @relation(fields: [productsId], references: [id], onDelete: Cascade, map: "FK_88687975db5205fdbdb10969fc4")
+  tags       Tags     @relation(fields: [tagsId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_72fa6ba0f176a89a2e9d90274c5")
+  products   Products @relation(fields: [productsId], references: [id], onDelete: Cascade, map: "FK_88687975db5205fdbdb10969fc4")
 
   @@id([productsId, tagsId], map: "PK_b06c7e3d7d74a176b4d936bcd73")
   @@index([tagsId], map: "IDX_72fa6ba0f176a89a2e9d90274c")
   @@index([productsId], map: "IDX_88687975db5205fdbdb10969fc")
+  @@map("products_tags")
 }
 
-model slide_images {
+model Slide_images {
   id          Int    @id(map: "PK_75744fd70f0d7fb5641c007cb29") @default(autoincrement())
   url         String @db.VarChar
   order_image Int    @default(0)
   slide_id    Int
-  slides      slides @relation(fields: [slide_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_1b789565cad8631f65aa608d6ca")
+  slides      Slides @relation(fields: [slide_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_1b789565cad8631f65aa608d6ca")
+  @@map("slide_images")
 }
 
-model slides {
+model Slides {
   id           Int            @id @default(autoincrement())
   title        String         @db.VarChar(255)
   description  String?
-  order        Int            @default(0)
+  Order        Int            @default(0)
   is_active    Boolean        @default(true)
   created_at   DateTime       @default(now()) @db.Timestamp(6)
   updated_at   DateTime       @default(now()) @db.Timestamp(6)
   is_default   Boolean        @default(false)
-  slide_images slide_images[]
+  slide_images Slide_images[]
+  @@map("slides")
 }
 
-model tags {
+model Tags {
   id                 Int                  @id(map: "PK_e7dc17249a1148a1970748eda99") @default(autoincrement())
   name               String               @unique(map: "UQ_d90243459a697eadb8ad56e9092") @db.VarChar
-  products_tags_tags products_tags_tags[]
+  products_tags_tags Products_tags_tags[]
+  @@map("tags")
 }
 
-model variants {
+model Variants {
   id        Int       @id(map: "PK_672d13d1a6de0197f20c6babb5e") @default(autoincrement())
   name      String    @db.VarChar
   price     Decimal?  @db.Decimal(10, 2)
   stock     Int
   imageUrl  String?   @db.VarChar
   productId Int?
-  products  products? @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_bdbfe33a28befefa9723c355036")
+  products  Products? @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_bdbfe33a28befefa9723c355036")
+  @@map("variants")
 }
 
 model PaymentMethod {
@@ -193,31 +204,31 @@ model PaymentMethod {
   is_default      Boolean  @default(false)
   created_at      DateTime @default(now()) @db.Timestamp(6)
   updated_at      DateTime @default(now()) @updatedAt @db.Timestamp(6)
-  users           users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "FK_paymentmethod_user")
+  Users           Users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "FK_paymentmethod_user")
 
   @@map("payment_methods")
 }
 
-model cart {
+model Cart {
   id         Int         @id @default(autoincrement())
   user_id    Int
   created_at DateTime    @default(now()) @db.Timestamp(6)
   updated_at DateTime    @default(now()) @updatedAt @db.Timestamp(6)
-  items      cart_item[]
-  users      users       @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "FK_cart_user")
+  items      Cart_item[]
+  Users      Users       @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "FK_cart_user")
 
   @@map("carts")
 }
 
-model cart_item {
+model Cart_item {
   id                  Int       @id @default(autoincrement())
   cart_id             Int
   product_id          Int
   quantity            Int
   price_snapshot      Decimal   @db.Decimal(10, 2)
   discount_snapshot   Decimal?  @db.Decimal(10, 2)
-  cart           cart           @relation(fields: [cart_id], references: [id], onDelete: Cascade, map: "FK_cartitem_cart")
-  products       products       @relation(fields: [product_id], references: [id], onDelete: NoAction, map: "FK_cartitem_product")
+  cart           Cart           @relation(fields: [cart_id], references: [id], onDelete: Cascade, map: "FK_cartitem_cart")
+  products       Products       @relation(fields: [product_id], references: [id], onDelete: NoAction, map: "FK_cartitem_product")
   created_at          DateTime  @default(now()) @db.Timestamp(6)
   updated_at          DateTime  @default(now()) @updatedAt @db.Timestamp(6)
   
