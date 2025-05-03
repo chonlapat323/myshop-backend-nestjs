@@ -18,10 +18,18 @@ export class AuthService {
     password: string,
   ): Promise<LoginUserPayload> {
     const user = await this.usersService.findByEmail(email);
-    console.log(`find user:${user}`);
-    if (user && (await bcrypt.compare(password, user.hashed_password!))) {
-      const { hashed_password, ...result } = user;
-      return result;
+    console.log('📄 Raw user:', user);
+    console.log('🔐 Password from request:', password);
+    console.log('🔐 Hashed password in DB:', user?.hashed_password);
+    if (user) {
+      const isMatch = await bcrypt.compare(password, user.hashed_password!);
+      console.log('🔍 bcrypt.compare result:', isMatch);
+      if (isMatch) {
+        const { hashed_password, ...result } = user;
+        return result;
+      } else {
+        console.warn('❌ Password does not match');
+      }
     }
     throw new UnauthorizedException('Invalid email or password');
   }
