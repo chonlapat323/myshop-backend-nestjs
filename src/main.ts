@@ -29,7 +29,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: 'http://localhost:3000', // อนุญาตเฉพาะ Next.js ที่รันบนพอร์ต 3001
+    origin: ['https://admin.paodev.xyz'], // อนุญาตเฉพาะ Next.js ที่รันบนพอร์ต 3001
     credentials: true, // อนุญาตให้ส่ง cookies หรือ headers อื่น ๆ
   });
   await app.listen(process.env.PORT ?? 3001);
