@@ -57,8 +57,12 @@ export function moveTempSlideImage(originalUrl: string): string {
     'slides',
     filename,
   );
+  const slidesDir = path.join(process.cwd(), 'public', 'uploads', 'slides');
 
   if (fs.existsSync(tempPath)) {
+    if (!fs.existsSync(slidesDir)) {
+      fs.mkdirSync(slidesDir, { recursive: true });
+    }
     fs.renameSync(tempPath, finalPath);
     return `/uploads/slides/${filename}`;
   }
