@@ -21,6 +21,8 @@ export class AuthService {
     console.log('📄 Raw user:', user);
     console.log('🔐 Password from request:', password);
     console.log('🔐 Hashed password in DB:', user?.hashed_password);
+    const hash = await bcrypt.hash('123123', 10);
+    console.log('🔐 Hashed password manual:', hash);
     if (user) {
       const isMatch = await bcrypt.compare(password, user.hashed_password!);
       console.log('🔍 bcrypt.compare result:', isMatch);
