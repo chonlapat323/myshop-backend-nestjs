@@ -53,6 +53,7 @@ export class AuthController {
       maxAge: FIVE_MINUTES,
       path: '/',
       secure: process.env.NODE_ENV === 'production',
+      domain: '.paodev.xyz',
     });
 
     res.cookie('refresh_token', token.refreshToken, {
@@ -61,6 +62,7 @@ export class AuthController {
       maxAge: SEVEN_DAYS,
       path: '/auth/refresh',
       secure: process.env.NODE_ENV === 'production',
+      domain: '.paodev.xyz',
     });
     return { message: 'Login success' };
   }
@@ -97,6 +99,7 @@ export class AuthController {
         sameSite: 'lax',
         maxAge: 1000 * 60 * 5,
         secure: process.env.NODE_ENV === 'production',
+        domain: '.paodev.xyz',
       });
 
       return { message: 'Access token refreshed' };
