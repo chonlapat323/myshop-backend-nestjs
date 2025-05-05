@@ -180,7 +180,14 @@ export class AuthController {
       });
     }
 
-    res.clearCookie('refresh_token', {
+    res.clearCookie('admin_refresh_token', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/auth/refresh',
+    });
+
+    res.clearCookie('member_refresh_token', {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
