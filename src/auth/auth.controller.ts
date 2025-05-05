@@ -89,7 +89,9 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refreshToken = req.cookies['refresh_token'];
+    const refreshToken =
+      req.cookies['admin_refresh_token'] || req.cookies['member_refresh_token'];
+
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
 
     try {
