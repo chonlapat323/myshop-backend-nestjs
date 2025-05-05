@@ -165,6 +165,7 @@ export class AuthController {
     const memberToken = req.cookies['member_token'];
 
     if (adminToken) {
+      console.log('clear admin');
       res.clearCookie('admin_token', {
         httpOnly: true,
         sameSite: 'lax',
@@ -173,6 +174,7 @@ export class AuthController {
     }
 
     if (memberToken) {
+      console.log('clear member');
       res.clearCookie('member_token', {
         httpOnly: true,
         sameSite: 'lax',
