@@ -1,46 +1,28 @@
-# 1. Base image
-FROM node:20-alpine
-
-# 2. Set working directory
+# Step 1: Build dependencies
+FROM node:20-alpine AS deps
 WORKDIR /app
 
-# 3. Copy package files
 COPY package*.json ./
-
-# 4. Install dependencies
 RUN npm install
 
-# 5. Copy source code
+# Step 2: Build source code
+FROM node:20-alpine AS builder
+WORKDIR /app
+
 COPY . .
-
-# ✅ 6. Generate Prisma client
-RUN npx prisma generate
-
-# 7. Build NestJS
+COPY --from=deps /app/node_modules ./node_modules
 RUN npm run build
 
-# 8. Expose port
+# Step 3: Create production image
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# ✅ Copy only required files
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
 EXPOSE 3000
-
-# 9. Start app
-CMD ["node", "dist/src/main.js"]
-
-
-
-# FROM node:20
-
-# WORKDIR /app
-
-# COPY package*.json prisma ./
-# RUN npm install
-
-# # Generate Prisma Client สำหรับ Linux ใน container
-# RUN npx prisma generate
-
-# COPY . .
-
-# EXPOSE 3000
-
-# CMD ["npm", "run", "start"]
-
-
+CMD ["node", "dist/main.js"]

@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma, Users as PrismaUser } from '@prisma/client';
 import { UserRole, UserRoleMap } from 'src/constants/user-role.enum';
