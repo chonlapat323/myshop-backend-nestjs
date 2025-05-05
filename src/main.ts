@@ -34,9 +34,11 @@ async function bootstrap() {
       'https://paodev.xyz',
       'localhost',
       'localhost:3001',
+      'http://localhost:3000',
+      'http://localhost:3002',
     ], // อนุญาตเฉพาะ Next.js ที่รันบนพอร์ต 3001
     credentials: true, // อนุญาตให้ส่ง cookies หรือ headers อื่น ๆ
   });
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
 }
 bootstrap();
