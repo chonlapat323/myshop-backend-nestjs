@@ -10,7 +10,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       //jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       jwtFromRequest: ExtractJwt.fromExtractors([
-        (req) => req?.cookies?.token || null,
+        (req) =>
+          req?.cookies?.admin_token || req?.cookies?.member_token || null,
       ]),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET'), // ควรใช้ environment variable

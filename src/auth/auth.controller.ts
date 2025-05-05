@@ -18,6 +18,8 @@ import { UserPayload } from 'types/auth/auth.services';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'types/auth/jwt-payload.interface';
 import { LoginDto } from './dto/login.dto';
+import { UserRole } from 'src/constants/user-role.enum';
+import { OptionalJwtAuthGuard } from './optional-jwt.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -39,34 +41,49 @@ export class AuthController {
     @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    console.log(body.email);
-    console.log(body.password);
     const user = await this.authService.validateUser(body.email, body.password);
-    console.log(user);
     const token = await this.authService.login(user);
+
     const FIVE_MINUTES = 1000 * 60 * 5;
     const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
 
-    res.cookie('token', token.accessToken, {
+    // ใช้ชื่อ cookie แยกตาม role
+    let tokenName = 'token';
+    let refreshTokenName = 'refresh_token';
+
+    if (
+      user.role_id === UserRole.ADMIN ||
+      user.role_id === UserRole.SUPERVISOR
+    ) {
+      tokenName = 'admin_token';
+      refreshTokenName = 'admin_refresh_token';
+    } else if (user.role_id === UserRole.MEMBER) {
+      tokenName = 'member_token';
+      refreshTokenName = 'member_refresh_token';
+    }
+
+    res.cookie(tokenName, token.accessToken, {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: FIVE_MINUTES,
       path: '/',
       secure: process.env.NODE_ENV === 'production',
-      domain: '.paodev.xyz',
+      domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
     });
 
-    res.cookie('refresh_token', token.refreshToken, {
+    res.cookie(refreshTokenName, token.refreshToken, {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: SEVEN_DAYS,
       path: '/auth/refresh',
       secure: process.env.NODE_ENV === 'production',
-      domain: '.paodev.xyz',
+      domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
     });
+
     return { message: 'Login success' };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('refresh')
   async refresh(
     @Req() req: Request,
@@ -94,12 +111,19 @@ export class AuthController {
         },
       );
 
-      res.cookie('token', newAccessToken, {
+      const FIVE_MINUTES = 1000 * 60 * 5;
+
+      // ✅ แยกชื่อ cookie ตาม role
+      const tokenCookieName =
+        payload.role_id === UserRole.ADMIN ? 'admin_token' : 'member_token';
+
+      res.cookie(tokenCookieName, newAccessToken, {
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: 1000 * 60 * 5,
+        maxAge: FIVE_MINUTES,
         secure: process.env.NODE_ENV === 'production',
-        domain: '.paodev.xyz',
+        domain:
+          process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
       });
 
       return { message: 'Access token refreshed' };
@@ -109,9 +133,12 @@ export class AuthController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('status')
-  getStatus(@CurrentUser() user: JwtPayload) {
+  getStatus(@CurrentUser() user: JwtPayload | null) {
+    if (!user) {
+      return { user: null };
+    }
     return {
       user: {
         id: user.userId,
@@ -123,19 +150,33 @@ export class AuthController {
     };
   }
 
-  @Post('profile')
   @UseGuards(JwtAuthGuard)
+  @Post('profile')
   getProfile(@Req() req: Request & { user: UserPayload }) {
     return req.user;
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('logout')
-  logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token', {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-    });
+  logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const adminToken = req.cookies['admin_token'];
+    const memberToken = req.cookies['member_token'];
+
+    if (adminToken) {
+      res.clearCookie('admin_token', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      });
+    }
+
+    if (memberToken) {
+      res.clearCookie('member_token', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      });
+    }
 
     res.clearCookie('refresh_token', {
       httpOnly: true,
