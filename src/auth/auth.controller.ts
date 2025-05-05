@@ -165,20 +165,22 @@ export class AuthController {
     const memberToken = req.cookies['member_token'];
 
     if (adminToken) {
-      console.log('clear admin');
       res.clearCookie('admin_token', {
         httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
+        domain:
+          process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
       });
     }
 
     if (memberToken) {
-      console.log('clear member');
       res.clearCookie('member_token', {
         httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
+        domain:
+          process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
       });
     }
 
@@ -187,6 +189,7 @@ export class AuthController {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       path: '/auth/refresh',
+      domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
     });
 
     res.clearCookie('member_refresh_token', {
@@ -194,6 +197,7 @@ export class AuthController {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       path: '/auth/refresh',
+      domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
     });
 
     return { message: 'Logged out successfully' };
