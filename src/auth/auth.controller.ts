@@ -84,7 +84,10 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.validateUser(body.email, body.password);
+    console.log('user.role_id =', user.role_id);
+    console.log('UserRole.MEMBER =', UserRole.MEMBER);
     if (user.role_id !== UserRole.MEMBER) {
+      console.log('throw');
       throw new UnauthorizedException('You are not allowed to login as member');
     }
     const token = await this.authService.login(user);
