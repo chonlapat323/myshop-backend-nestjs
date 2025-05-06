@@ -13,10 +13,10 @@ import { CartService } from './cart.service';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'types/auth/jwt-payload.interface';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { UpdateCartItemDto } from './dto/update-cart.dto';
+import { JwtMemberAuthGuard } from 'src/auth/jwt-member-auth.guard';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtMemberAuthGuard)
 @Controller('cart')
 export class CartController {
   constructor(private readonly cartService: CartService) {}
