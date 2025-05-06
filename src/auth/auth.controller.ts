@@ -19,7 +19,8 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'types/auth/jwt-payload.interface';
 import { LoginDto } from './dto/login.dto';
 import { UserRole } from 'src/constants/user-role.enum';
-import { OptionalJwtAuthGuard } from './optional-jwt.guard';
+import { OptionalAdminJwtGuard } from './optional-admin-jwt.guard';
+import { OptionalMemberJwtGuard } from './optional-member-jwt.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -125,15 +126,39 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refreshToken =
-      req.cookies['admin_refresh_token'] || req.cookies['member_refresh_token'];
+    const adminRefreshToken = req.cookies['admin_refresh_token'];
+    const memberRefreshToken = req.cookies['member_refresh_token'];
 
-    if (!refreshToken) throw new UnauthorizedException('No refresh token');
+    let refreshToken: string | undefined;
+    let expectedRole: UserRole;
+    let tokenCookieName: string;
+
+    if (adminRefreshToken) {
+      refreshToken = adminRefreshToken;
+      expectedRole = UserRole.ADMIN; // หรือจะรองรับ SUPERVISOR ด้วยก็ได้
+      tokenCookieName = 'admin_token';
+    } else if (memberRefreshToken) {
+      refreshToken = memberRefreshToken;
+      expectedRole = UserRole.MEMBER;
+      tokenCookieName = 'member_token';
+    } else {
+      throw new UnauthorizedException('No refresh token');
+    }
 
     try {
-      const payload = await this.jwtService.verifyAsync(refreshToken, {
+      const payload = await this.jwtService.verifyAsync(refreshToken!, {
         secret: this.jwtSecret,
       });
+
+      if (
+        (expectedRole === UserRole.ADMIN &&
+          payload.role_id !== UserRole.ADMIN &&
+          payload.role_id !== UserRole.SUPERVISOR) ||
+        (expectedRole === UserRole.MEMBER &&
+          payload.role_id !== UserRole.MEMBER)
+      ) {
+        throw new UnauthorizedException('Invalid token role');
+      }
 
       const newAccessToken = this.jwtService.sign(
         {
@@ -150,10 +175,6 @@ export class AuthController {
       );
 
       const FIVE_MINUTES = 1000 * 60 * 5;
-
-      // ✅ แยกชื่อ cookie ตาม role
-      const tokenCookieName =
-        payload.role_id === UserRole.ADMIN ? 'admin_token' : 'member_token';
 
       res.cookie(tokenCookieName, newAccessToken, {
         httpOnly: true,
@@ -172,7 +193,7 @@ export class AuthController {
   }
 
   @Get('status_admin')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalAdminJwtGuard)
   getAdminStatus(@CurrentUser() user: JwtPayload | null) {
     if (
       !user ||
@@ -184,7 +205,7 @@ export class AuthController {
   }
 
   @Get('status_member')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalMemberJwtGuard)
   getMemberStatus(@CurrentUser() user: JwtPayload | null) {
     if (!user || user.role_id !== UserRole.MEMBER) {
       return { user: null };
