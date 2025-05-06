@@ -42,6 +42,13 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.validateUser(body.email, body.password);
+    if (
+      user.role_id !== UserRole.ADMIN &&
+      user.role_id !== UserRole.SUPERVISOR
+    ) {
+      throw new UnauthorizedException('You are not allowed to login as admin');
+    }
+
     const token = await this.authService.login(user);
 
     const FIVE_MINUTES = 1000 * 60 * 5;
@@ -77,6 +84,9 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.validateUser(body.email, body.password);
+    if (user.role_id !== UserRole.MEMBER) {
+      throw new UnauthorizedException('You are not allowed to login as member');
+    }
     const token = await this.authService.login(user);
 
     const FIVE_MINUTES = 1000 * 60 * 5;
