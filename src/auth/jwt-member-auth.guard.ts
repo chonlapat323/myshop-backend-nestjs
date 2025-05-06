@@ -24,7 +24,7 @@ export class JwtMemberAuthGuard implements CanActivate {
         secret: process.env.JWT_SECRET!,
       });
 
-      if (payload.role_id !== 3) {
+      if (Number(payload.role_id) !== 3) {
         throw new UnauthorizedException('Token role is not member');
       }
 
