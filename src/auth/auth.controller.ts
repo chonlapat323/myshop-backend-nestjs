@@ -199,23 +199,12 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('logout')
-  logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  @Post('logout_admin')
+  logoutAdmin(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const adminToken = req.cookies['admin_token'];
-    const memberToken = req.cookies['member_token'];
 
     if (adminToken) {
       res.clearCookie('admin_token', {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        domain:
-          process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
-      });
-    }
-
-    if (memberToken) {
-      res.clearCookie('member_token', {
         httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
@@ -231,6 +220,24 @@ export class AuthController {
       path: '/auth/refresh',
       domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
     });
+
+    return { message: 'Logged out successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout_member')
+  logoutMember(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const memberToken = req.cookies['member_token'];
+
+    if (memberToken) {
+      res.clearCookie('member_token', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        domain:
+          process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
+      });
+    }
 
     res.clearCookie('member_refresh_token', {
       httpOnly: true,
