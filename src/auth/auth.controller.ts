@@ -36,8 +36,8 @@ export class AuthController {
     }
   }
 
-  @Post('login')
-  async login(
+  @Post('login_admin')
+  async loginAdmin(
     @Body() body: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -47,20 +47,43 @@ export class AuthController {
     const FIVE_MINUTES = 1000 * 60 * 5;
     const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
 
-    // ใช้ชื่อ cookie แยกตาม role
-    let tokenName = 'token';
-    let refreshTokenName = 'refresh_token';
+    let tokenName = 'admin_token';
+    let refreshTokenName = 'admin_refresh_token';
 
-    if (
-      user.role_id === UserRole.ADMIN ||
-      user.role_id === UserRole.SUPERVISOR
-    ) {
-      tokenName = 'admin_token';
-      refreshTokenName = 'admin_refresh_token';
-    } else if (user.role_id === UserRole.MEMBER) {
-      tokenName = 'member_token';
-      refreshTokenName = 'member_refresh_token';
-    }
+    res.cookie(tokenName, token.accessToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: FIVE_MINUTES,
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
+    });
+
+    res.cookie(refreshTokenName, token.refreshToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: SEVEN_DAYS,
+      path: '/auth/refresh',
+      secure: process.env.NODE_ENV === 'production',
+      domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
+    });
+
+    return { message: 'Login success' };
+  }
+
+  @Post('login_member')
+  async loginMember(
+    @Body() body: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = await this.authService.validateUser(body.email, body.password);
+    const token = await this.authService.login(user);
+
+    const FIVE_MINUTES = 1000 * 60 * 5;
+    const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
+
+    let tokenName = 'member_token';
+    let refreshTokenName = 'member_refresh_token';
 
     res.cookie(tokenName, token.accessToken, {
       httpOnly: true,
