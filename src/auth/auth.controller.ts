@@ -171,21 +171,25 @@ export class AuthController {
     }
   }
 
+  @Get('status_admin')
   @UseGuards(OptionalJwtAuthGuard)
-  @Get('status')
-  getStatus(@CurrentUser() user: JwtPayload | null) {
-    if (!user) {
+  getAdminStatus(@CurrentUser() user: JwtPayload | null) {
+    if (
+      !user ||
+      (user.role_id !== UserRole.ADMIN && user.role_id !== UserRole.SUPERVISOR)
+    ) {
       return { user: null };
     }
-    return {
-      user: {
-        id: user.userId,
-        email: user.email,
-        role: user.role_id,
-        name: user.name,
-        image_url: user.image_url,
-      },
-    };
+    return { user };
+  }
+
+  @Get('status_member')
+  @UseGuards(OptionalJwtAuthGuard)
+  getMemberStatus(@CurrentUser() user: JwtPayload | null) {
+    if (!user || user.role_id !== UserRole.MEMBER) {
+      return { user: null };
+    }
+    return { user };
   }
 
   @UseGuards(JwtAuthGuard)
