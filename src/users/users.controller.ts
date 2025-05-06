@@ -29,11 +29,14 @@ import { JwtPayload } from 'types/auth/jwt-payload.interface';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { editFileName, imageFileFilter } from 'utils';
 import { promises as fsPromises } from 'fs';
-@UseGuards(JwtAuthGuard)
+import { JwtMemberAuthGuard } from 'src/auth/jwt-member-auth.guard';
+import { JwtAdminAuthGuard } from 'src/auth/jwt-admin-auth.guard';
+
 @Controller('users')
 export class UserController {
   constructor(private readonly usersService: UsersService) {}
 
+  @UseGuards(JwtAdminAuthGuard)
   @Get()
   async findUsers(
     @Query('role') role: string,
@@ -52,11 +55,13 @@ export class UserController {
     });
   }
 
+  @UseGuards(JwtMemberAuthGuard)
   @Get('me')
   getMe(@CurrentUser() user: JwtPayload) {
     return this.usersService.findUserById(user.userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   async getUserById(@Param('id', ParseIntPipe) id: number) {
     const member = await this.usersService.findUserById(id);
@@ -68,16 +73,19 @@ export class UserController {
     return member;
   }
 
+  @UseGuards(JwtAdminAuthGuard)
   @Get('admins')
   findAdmins() {
     return this.usersService.findByRoles([UserRole.ADMIN, UserRole.SUPERVISOR]);
   }
 
+  @UseGuards(JwtAdminAuthGuard)
   @Get('members')
   findMembers() {
     return this.usersService.findByRoles([UserRole.MEMBER]);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @UseInterceptors(
     FileInterceptor('avatar', {
@@ -125,6 +133,7 @@ export class UserController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/update')
   @UseInterceptors(
     FileInterceptor('avatar', {
@@ -179,6 +188,7 @@ export class UserController {
     }
   }
 
+  @UseGuards(JwtMemberAuthGuard)
   @Patch('me')
   @UseInterceptors(
     FileInterceptor('avatar', {
@@ -214,6 +224,7 @@ export class UserController {
     return this.usersService.update(user.userId, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
