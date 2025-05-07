@@ -12,11 +12,11 @@ import {
 import { PaymentMethodService } from './payment-method.service';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'types/auth/jwt-payload.interface';
+import { JwtMemberAuthGuard } from 'src/auth/jwt-member-auth.guard';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtMemberAuthGuard)
 @Controller('payment-method')
 export class PaymentMethodController {
   constructor(private readonly paymentMethodService: PaymentMethodService) {}
