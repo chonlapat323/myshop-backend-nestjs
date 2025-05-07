@@ -23,6 +23,59 @@ import { JwtMemberAuthGuard } from 'src/auth/jwt-member-auth.guard';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  @UseGuards(JwtAdminAuthGuard) // get_orders
+  @Get('admin')
+  async findAllOrders(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+    @Query('search') search: string = '',
+  ): Promise<{
+    data: Order[];
+    total: number;
+    page: number;
+    pageCount: number;
+  }> {
+    if (user.role_id !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        'You are not allowed to access admin orders',
+      );
+    }
+
+    const parsedPage = Number(page) || 1;
+    const parsedLimit = Number(limit) || 10;
+
+    return this.ordersService.findPaginated({
+      page: parsedPage,
+      limit: parsedLimit,
+      search,
+    });
+  }
+
+  @UseGuards(JwtAdminAuthGuard) // get_order_by_id
+  @Get('admin/:id')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.findOne(id);
+  }
+
+  @UseGuards(JwtAdminAuthGuard) // update_by_id
+  @Patch('admin/:id')
+  async updateOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: UpdateOrderDto,
+  ) {
+    return this.ordersService.updateOrder(id, data);
+  }
+
+  @UseGuards(JwtAdminAuthGuard) // cancel_by_id
+  @Patch('admin/:id/cancel')
+  async cancelOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.ordersService.cancelOrder(id, user.userId);
+  }
+
   @UseGuards(JwtMemberAuthGuard) // get_orders
   @Get()
   async findMyOrders(
@@ -82,59 +135,6 @@ export class OrdersController {
     if (order.userId !== user.userId) {
       throw new ForbiddenException('Access denied.');
     }
-    return this.ordersService.cancelOrder(id, user.userId);
-  }
-
-  @UseGuards(JwtAdminAuthGuard) // get_orders
-  @Get('admin')
-  async findAllOrders(
-    @CurrentUser() user: JwtPayload,
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '10',
-    @Query('search') search: string = '',
-  ): Promise<{
-    data: Order[];
-    total: number;
-    page: number;
-    pageCount: number;
-  }> {
-    if (user.role_id !== UserRole.ADMIN) {
-      throw new ForbiddenException(
-        'You are not allowed to access admin orders',
-      );
-    }
-
-    const parsedPage = Number(page) || 1;
-    const parsedLimit = Number(limit) || 10;
-
-    return this.ordersService.findPaginated({
-      page: parsedPage,
-      limit: parsedLimit,
-      search,
-    });
-  }
-
-  @UseGuards(JwtAdminAuthGuard) // get_order_by_id
-  @Get('admin/:id')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.ordersService.findOne(id);
-  }
-
-  @UseGuards(JwtAdminAuthGuard) // update_by_id
-  @Patch('admin/:id')
-  async updateOrder(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() data: UpdateOrderDto,
-  ) {
-    return this.ordersService.updateOrder(id, data);
-  }
-
-  @UseGuards(JwtAdminAuthGuard) // cancel_by_id
-  @Patch('admin/:id/cancel')
-  async cancelOrder(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: JwtPayload,
-  ) {
     return this.ordersService.cancelOrder(id, user.userId);
   }
 }

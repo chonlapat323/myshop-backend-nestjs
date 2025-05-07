@@ -12,6 +12,7 @@ export class JwtMemberAuthGuard implements CanActivate {
   constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    console.log('✅ [JwtMemberAuthGuard] used');
     const req = context.switchToHttp().getRequest<Request>();
     const token = req.cookies['member_token'];
 
