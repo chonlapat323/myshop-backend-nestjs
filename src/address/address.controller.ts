@@ -14,9 +14,9 @@ import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'types/auth/jwt-payload.interface';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtMemberAuthGuard } from 'src/auth/jwt-member-auth.guard';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtMemberAuthGuard)
 @Controller('addresses')
 export class AddressController {
   constructor(private readonly addressService: AddressService) {}
