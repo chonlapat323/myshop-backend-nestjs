@@ -105,6 +105,7 @@ model Category {
   image       String?    @db.VarChar
   is_active   Boolean    @default(true)
   link        String?    @unique
+  order       Int     @default(0)
   created_at  DateTime   @default(now()) @db.Timestamptz(6)
   deleted_at  DateTime?  @db.Timestamp(6)
   products    Products[]
