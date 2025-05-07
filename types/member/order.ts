@@ -13,6 +13,7 @@ export type OrderItem = {
 
 export type Order = {
   id: number;
+  userId: number;
   order_number: string;
   total_price: number;
   order_status: string;

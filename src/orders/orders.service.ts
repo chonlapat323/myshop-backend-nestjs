@@ -78,6 +78,7 @@ export class OrdersService {
 
     const mapped = orders.map((order) => ({
       id: order.id,
+      userId: order.userId,
       order_number: order.order_number,
       total_price: Number(order.total_price),
       order_status: order.order_status,
@@ -229,6 +230,7 @@ export class OrdersService {
 
     return {
       id: order.id,
+      userId: order.userId,
       order_number: order.order_number,
       total_price: Number(order.total_price),
       order_status: order.order_status,
