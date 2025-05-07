@@ -253,6 +253,15 @@ export class OrdersService {
           })),
         },
       })),
+      shipping_address: {
+        full_name: order.shipping_full_name,
+        address_line: order.shipping_address_line1,
+        city: order.shipping_city,
+        zip_code: order.shipping_zip,
+        country: order.shipping_country,
+        phone_number: order.shipping_phone!,
+        state: order.shipping_state!,
+      },
     };
   }
 
