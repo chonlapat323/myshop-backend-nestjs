@@ -377,6 +377,25 @@ export class OrdersService {
     });
   }
 
+  async cancelOrderAdmin(orderId: number, userId: number) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.order_status === OrderStatus.cancelled) {
+      throw new BadRequestException('Order already cancelled');
+    }
+
+    return this.prisma.order.update({
+      where: { id: orderId },
+      data: { order_status: OrderStatus.cancelled },
+    });
+  }
+
   private async generateOrderNumber(): Promise<string> {
     const date = new Date();
     const yyyymmdd = date.toISOString().slice(0, 10).replace(/-/g, '');

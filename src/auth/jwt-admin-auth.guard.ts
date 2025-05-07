@@ -13,7 +13,6 @@ export class JwtAdminAuthGuard implements CanActivate {
   constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    console.log('✅ [JwtAdminAuthGuard] used');
     const req = context.switchToHttp().getRequest<Request>();
     const token = req.cookies['admin_token'];
 

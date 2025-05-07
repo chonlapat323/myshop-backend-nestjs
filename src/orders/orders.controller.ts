@@ -73,7 +73,7 @@ export class OrdersController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.ordersService.cancelOrder(id, user.userId);
+    return this.ordersService.cancelOrderAdmin(id, user.userId);
   }
 
   @UseGuards(JwtMemberAuthGuard) // get_orders
