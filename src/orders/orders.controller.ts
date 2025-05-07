@@ -89,9 +89,9 @@ export class OrdersController {
   @Get('admin')
   async findAllOrders(
     @CurrentUser() user: JwtPayload,
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
-    @Query('search') search = '',
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
+    @Query('search') search: string = '',
   ): Promise<{
     data: Order[];
     total: number;
