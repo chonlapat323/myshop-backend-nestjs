@@ -11,7 +11,9 @@ WORKDIR /app
 
 COPY public ./public
 COPY src ./src
-COPY prisma ./prisma   
+COPY prisma ./prisma
+COPY types ./types
+COPY utils ./utils
 COPY nest-cli.json ./
 COPY tsconfig*.json ./
 COPY package.json ./
