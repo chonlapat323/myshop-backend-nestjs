@@ -9,7 +9,14 @@ RUN npm install
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY . .
+# ✅ Only copy needed files (no uploads)
+COPY public ./public
+COPY src ./src
+COPY nest-cli.json ./
+COPY tsconfig*.json ./
+COPY package.json ./
+COPY .env .env
+
 COPY --from=deps /app/node_modules ./node_modules
 RUN npm run build
 
@@ -19,7 +26,6 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# ✅ Copy only required files
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
