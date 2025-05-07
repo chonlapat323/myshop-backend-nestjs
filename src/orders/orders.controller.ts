@@ -19,6 +19,8 @@ import { UserRole } from 'src/constants/user-role.enum';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'types/auth/jwt-payload.interface';
+import { JwtAdminAuthGuard } from 'src/auth/jwt-admin-auth.guard';
+import { JwtMemberAuthGuard } from 'src/auth/jwt-member-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('orders')
 export class OrdersController {
@@ -36,6 +38,7 @@ export class OrdersController {
     return this.ordersService.findByUserId(user.userId, pageNumber, pageSize);
   }
 
+  @UseGuards(JwtAdminAuthGuard)
   @Get('admin')
   async findAllOrders(
     @CurrentUser() user: JwtPayload,
@@ -69,6 +72,7 @@ export class OrdersController {
     return this.ordersService.findOne(id);
   }
 
+  @UseGuards(JwtMemberAuthGuard)
   @Post()
   create(
     @CurrentUser() user: JwtPayload,
