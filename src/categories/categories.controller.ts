@@ -10,6 +10,7 @@ import {
   UploadedFile,
   UseGuards,
   ParseIntPipe,
+  Patch,
 } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -18,7 +19,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAdminAuthGuard } from 'src/auth/jwt-admin-auth.guard';
+import { UpdateCategoryOrderDto } from './dto/update-category-order.dto';
 
 @Controller('categories')
 export class CategoriesController {
@@ -29,7 +31,7 @@ export class CategoriesController {
     return this.categoriesService.findActive();
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminAuthGuard)
   @Get('all')
   getAllCategories() {
     return this.categoriesService.findAllIncludingDeleted();
@@ -55,7 +57,7 @@ export class CategoriesController {
     return this.categoriesService.findOne(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminAuthGuard)
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
@@ -101,7 +103,7 @@ export class CategoriesController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAdminAuthGuard)
   @Post(':id/update')
   @UseInterceptors(
     FileInterceptor('image', {
@@ -150,7 +152,13 @@ export class CategoriesController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Patch('admin/order')
+  @UseGuards(JwtAdminAuthGuard)
+  updateCategoryOrder(@Body() dto: UpdateCategoryOrderDto) {
+    return this.categoriesService.updateOrder(dto.data);
+  }
+
+  @UseGuards(JwtAdminAuthGuard)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.categoriesService.remove(id);

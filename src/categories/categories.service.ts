@@ -12,7 +12,7 @@ export class CategoriesService {
 
   findAllIncludingDeleted(): Promise<Category[]> {
     return this.prisma.category.findMany({
-      orderBy: { created_at: 'desc' },
+      orderBy: { order: 'asc', created_at: 'desc' },
     });
   }
 
@@ -22,6 +22,7 @@ export class CategoriesService {
         is_active: true,
         deleted_at: null,
       },
+      orderBy: { order: 'asc' },
     });
   }
 
@@ -64,7 +65,7 @@ export class CategoriesService {
         where,
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        orderBy: { order: 'asc' },
       }),
       this.prisma.category.count({ where }),
     ]);
@@ -118,6 +119,18 @@ export class CategoriesService {
       handlePrismaError(error);
       throw error;
     }
+  }
+
+  async updateOrder(data: { id: number; order: number }[]) {
+    const updatePromises = data.map((item) =>
+      this.prisma.category.update({
+        where: { id: item.id },
+        data: { order: item.order },
+      }),
+    );
+
+    await Promise.all(updatePromises);
+    return { message: '✅ Categories reordered successfully' };
   }
 
   async remove(id: number) {
