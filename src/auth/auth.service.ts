@@ -1,9 +1,17 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { LoginUserPayload } from 'types/auth/auth.services';
 import { ConfigService } from '@nestjs/config';
+import { RegisterMemberDto } from './dto/register-member.dto';
+import { UserRole } from 'src/constants/user-role.enum';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
@@ -11,7 +19,30 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private prisma: PrismaService,
   ) {}
+
+  async registerMember(dto: RegisterMemberDto) {
+    const existing = await this.prisma.users.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (existing) {
+      throw new ConflictException('This email is already in use');
+    }
+
+    const { password, ...safeData } = dto;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const data = {
+      ...safeData,
+      hashed_password: hashedPassword,
+      role_id: UserRole.MEMBER,
+    };
+
+    return this.prisma.users.create({ data });
+  }
 
   async validateUser(
     email: string,
