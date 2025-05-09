@@ -21,6 +21,7 @@ import { LoginDto } from './dto/login.dto';
 import { UserRole } from 'src/constants/user-role.enum';
 import { OptionalAdminJwtGuard } from './optional-admin-jwt.guard';
 import { OptionalMemberJwtGuard } from './optional-member-jwt.guard';
+import { RegisterMemberDto } from './dto/register-member.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -35,6 +36,11 @@ export class AuthController {
     if (!this.jwtSecret) {
       throw new Error('JWT_SECRET is not defined in environment variables.');
     }
+  }
+
+  @Post('register')
+  async registerMember(@Body() dto: RegisterMemberDto) {
+    return this.authService.registerMember(dto);
   }
 
   @Post('login_admin')
