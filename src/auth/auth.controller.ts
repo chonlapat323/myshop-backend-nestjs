@@ -58,7 +58,7 @@ export class AuthController {
 
     const token = await this.authService.login(user);
 
-    const FIVE_MINUTES = 1000 * 60 * 5;
+    const FIVE_MINUTES = 1000 * 60 * 1;
     const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
 
     let tokenName = 'admin_token';
@@ -77,7 +77,7 @@ export class AuthController {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: SEVEN_DAYS,
-      path: '/auth/refresh',
+      path: '/',
       secure: process.env.NODE_ENV === 'production',
       domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
     });
@@ -99,7 +99,7 @@ export class AuthController {
     }
     const token = await this.authService.login(user);
 
-    const FIVE_MINUTES = 1000 * 60 * 5;
+    const FIVE_MINUTES = 1000 * 60 * 1;
     const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
 
     let tokenName = 'member_token';
@@ -118,7 +118,7 @@ export class AuthController {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: SEVEN_DAYS,
-      path: '/auth/refresh',
+      path: '/',
       secure: process.env.NODE_ENV === 'production',
       domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
     });
@@ -127,13 +127,12 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('refresh')
-  async refresh(
+  @Post('admin/refresh')
+  async adminRefresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const adminRefreshToken = req.cookies['admin_refresh_token'];
-    const memberRefreshToken = req.cookies['member_refresh_token'];
 
     let refreshToken: string | undefined;
     let expectedRole: UserRole;
@@ -143,10 +142,6 @@ export class AuthController {
       refreshToken = adminRefreshToken;
       expectedRole = UserRole.ADMIN; // หรือจะรองรับ SUPERVISOR ด้วยก็ได้
       tokenCookieName = 'admin_token';
-    } else if (memberRefreshToken) {
-      refreshToken = memberRefreshToken;
-      expectedRole = UserRole.MEMBER;
-      tokenCookieName = 'member_token';
     } else {
       throw new UnauthorizedException('No refresh token');
     }
@@ -157,11 +152,8 @@ export class AuthController {
       });
 
       if (
-        (expectedRole === UserRole.ADMIN &&
-          payload.role_id !== UserRole.ADMIN &&
-          payload.role_id !== UserRole.SUPERVISOR) ||
-        (expectedRole === UserRole.MEMBER &&
-          payload.role_id !== UserRole.MEMBER)
+        expectedRole === UserRole.ADMIN &&
+        payload.role_id !== UserRole.ADMIN
       ) {
         throw new UnauthorizedException('Invalid token role');
       }
@@ -180,20 +172,79 @@ export class AuthController {
         },
       );
 
-      const FIVE_MINUTES = 1000 * 60 * 5;
+      const FIVE_MINUTES = 1000 * 60 * 1;
 
       res.cookie(tokenCookieName, newAccessToken, {
         httpOnly: true,
         sameSite: 'lax',
         maxAge: FIVE_MINUTES,
         secure: process.env.NODE_ENV === 'production',
-        domain:
-          process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
       });
 
       return { message: 'Access token refreshed' };
     } catch (err) {
       console.error('Refresh token error:', err.message);
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  @Post('member/refresh')
+  async memberRefresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const memberRefreshToken = req.cookies['member_refresh_token'];
+
+    let refreshToken: string | undefined;
+    let expectedRole: UserRole;
+    let tokenCookieName: string;
+
+    if (memberRefreshToken) {
+      refreshToken = memberRefreshToken;
+      expectedRole = UserRole.MEMBER;
+      tokenCookieName = 'member_token';
+    } else {
+      throw new UnauthorizedException('No refresh token');
+    }
+
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken!, {
+        secret: this.jwtSecret,
+      });
+
+      if (
+        expectedRole === UserRole.MEMBER &&
+        payload.role_id !== UserRole.MEMBER
+      ) {
+        throw new UnauthorizedException('Invalid token role');
+      }
+
+      const newAccessToken = this.jwtService.sign(
+        {
+          userId: payload.userId,
+          email: payload.email,
+          role_id: payload.role_id,
+          name: payload.name,
+          image_url: payload.image_url,
+        },
+        {
+          secret: this.jwtSecret,
+          expiresIn: '5m',
+        },
+      );
+
+      const FIVE_MINUTES = 1000 * 60 * 1; // 1 นาที
+
+      res.cookie(tokenCookieName, newAccessToken, {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: FIVE_MINUTES,
+        secure: process.env.NODE_ENV === 'production',
+      });
+
+      return { message: 'Access token refreshed' };
+    } catch (err) {
+      console.error('❌ Refresh token error:', err.message);
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
@@ -235,8 +286,6 @@ export class AuthController {
         httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
-        domain:
-          process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
       });
     }
 
@@ -245,7 +294,6 @@ export class AuthController {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       path: '/auth/refresh',
-      domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
     });
 
     return { message: 'Logged out successfully' };
@@ -261,8 +309,6 @@ export class AuthController {
         httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
-        domain:
-          process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
       });
     }
 
@@ -271,7 +317,6 @@ export class AuthController {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       path: '/auth/refresh',
-      domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
     });
 
     return { message: 'Logged out successfully' };
