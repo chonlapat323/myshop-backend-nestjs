@@ -126,7 +126,6 @@ export class AuthController {
     return { message: 'Login success' };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('admin/refresh')
   async adminRefresh(
     @Req() req: Request,
