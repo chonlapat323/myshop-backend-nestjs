@@ -37,6 +37,7 @@ export class CategoriesController {
     return this.categoriesService.findAllIncludingDeleted();
   }
 
+  @UseGuards(JwtAdminAuthGuard)
   @Get('paginated')
   async findPaginated(
     @Query('page') page = 1,
