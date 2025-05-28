@@ -56,10 +56,11 @@ export class AddressController {
   }
 
   @Delete(':id')
-  remove(
+  async remove(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.addressService.remove(id, user.userId);
+    await this.addressService.remove(id, user.userId);
+    return { message: 'Delete success' };
   }
 }

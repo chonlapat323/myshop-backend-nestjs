@@ -92,8 +92,7 @@ export class AddressService {
     const address = await this.prisma.addresses.findUnique({
       where: { id },
     });
-
-    if (!address || address.user_id !== userId) {
+    if (!address || Number(address.user_id) !== Number(userId)) {
       throw new ForbiddenException('คุณไม่มีสิทธิ์ลบที่อยู่นี้');
     }
 
