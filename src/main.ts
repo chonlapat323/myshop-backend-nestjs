@@ -1,8 +1,8 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import * as cookieParser from 'cookie-parser';
 import { ArgumentsHost, ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import * as cookieParser from 'cookie-parser';
 import * as express from 'express';
+import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
@@ -29,14 +29,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: [
-      'https://admin.paodev.xyz',
-      'https://paodev.xyz',
-      'localhost',
-      'localhost:3001',
-      'http://localhost:3000',
-      'http://localhost:3002',
-    ], // อนุญาตเฉพาะ Next.js ที่รันบนพอร์ต 3001
+    origin: true,
     credentials: true, // อนุญาตให้ส่ง cookies หรือ headers อื่น ๆ
   });
   await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
