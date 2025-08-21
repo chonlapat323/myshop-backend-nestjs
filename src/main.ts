@@ -13,8 +13,8 @@ async function bootstrap() {
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // ตัด property ที่ไม่ได้อยู่ใน DTO ออก
-      forbidNonWhitelisted: true, // ถ้าเจอ prop แปลก → error
+      whitelist: false, // ตัด property ที่ไม่ได้อยู่ใน DTO ออก
+      forbidNonWhitelisted: false, // ถ้าเจอ prop แปลก → error
       transform: true, // แปลง type ให้ตรงกับ DTO เช่น string -> number
     }),
   );
