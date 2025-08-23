@@ -1,17 +1,16 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { LoginUserPayload } from 'types/auth/auth.services';
-import { ConfigService } from '@nestjs/config';
-import { RegisterMemberDto } from './dto/register-member.dto';
 import { UserRole } from 'src/constants/user-role.enum';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { LoginUserPayload } from 'types/auth/auth.services';
+import { UsersService } from '../users/users.service';
+import { RegisterMemberDto } from './dto/register-member.dto';
 
 @Injectable()
 export class AuthService {
@@ -83,7 +82,7 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: jwtSecret,
-      expiresIn: '5m',
+      expiresIn: '7d', // ✅ เปลี่ยนจาก 5m เป็น 7 วัน
     });
 
     const refreshToken = this.jwtService.sign(payload, {

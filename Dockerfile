@@ -20,8 +20,8 @@ COPY package.json ./
 COPY .env .env
 COPY --from=deps /app/node_modules ./node_modules
 
-RUN npx prisma generate
-RUN npx prisma migrate deploy
+#RUN npx prisma generate
+#RUN npx prisma migrate deploy
 
 RUN npm run build
 

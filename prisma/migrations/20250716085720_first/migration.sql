@@ -86,6 +86,7 @@ CREATE TABLE "category" (
     "image" VARCHAR,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "link" TEXT,
+    "order" INTEGER NOT NULL DEFAULT 0,
     "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" TIMESTAMP(6),
 

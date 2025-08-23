@@ -1,27 +1,26 @@
 import {
-  Controller,
-  Post,
   Body,
+  Controller,
+  Get,
+  Post,
   Req,
-  UseGuards,
   Res,
   UnauthorizedException,
-  Get,
+  UseGuards,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './jwt-auth.guard';
-import { Response } from 'express';
-import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { UserPayload } from 'types/auth/auth.services';
+import { JwtService } from '@nestjs/jwt';
+import { Request, Response } from 'express';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { JwtPayload } from 'types/auth/jwt-payload.interface';
-import { LoginDto } from './dto/login.dto';
 import { UserRole } from 'src/constants/user-role.enum';
+import { UserPayload } from 'types/auth/auth.services';
+import { JwtPayload } from 'types/auth/jwt-payload.interface';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterMemberDto } from './dto/register-member.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { OptionalAdminJwtGuard } from './optional-admin-jwt.guard';
 import { OptionalMemberJwtGuard } from './optional-member-jwt.guard';
-import { RegisterMemberDto } from './dto/register-member.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -58,7 +57,7 @@ export class AuthController {
 
     const token = await this.authService.login(user);
 
-    const FIVE_MINUTES = 1000 * 60 * 1;
+    const FIVE_MINUTES = 1000 * 60 * 60;
     const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
 
     let tokenName = 'admin_token';
@@ -99,7 +98,7 @@ export class AuthController {
     }
     const token = await this.authService.login(user);
 
-    const FIVE_MINUTES = 1000 * 60 * 1;
+    const FIVE_MINUTES = 1000 * 60 * 60;
     const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
 
     let tokenName = 'member_token';
@@ -167,11 +166,11 @@ export class AuthController {
         },
         {
           secret: this.jwtSecret,
-          expiresIn: '5m',
+          expiresIn: '60m',
         },
       );
 
-      const FIVE_MINUTES = 1000 * 60 * 1;
+      const FIVE_MINUTES = 1000 * 60 * 60;
 
       res.cookie(tokenCookieName, newAccessToken, {
         httpOnly: true,
@@ -228,7 +227,7 @@ export class AuthController {
         },
         {
           secret: this.jwtSecret,
-          expiresIn: '5m',
+          expiresIn: '60m',
         },
       );
 
