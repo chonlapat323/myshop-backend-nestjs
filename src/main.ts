@@ -14,11 +14,14 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // ✅ เพิ่ม Static File Serving สำหรับรูปภาพ
-  app.use(
-    '/uploads',
-    express.static(join(__dirname, '..', 'public', 'uploads')),
-  );
-  app.use('/public', express.static(join(__dirname, '..', 'public')));
+  const uploadsPath = join(process.cwd(), 'public', 'uploads');
+  const publicPath = join(process.cwd(), 'public');
+
+  console.log('📁 Uploads path:', uploadsPath);
+  console.log('📁 Public path:', publicPath);
+
+  app.use('/uploads', express.static(uploadsPath));
+  app.use('/public', express.static(publicPath));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: false, // ตัด property ที่ไม่ได้อยู่ใน DTO ออก
