@@ -2,6 +2,7 @@ import { ArgumentsHost, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
 import * as express from 'express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
@@ -11,6 +12,13 @@ async function bootstrap() {
   app.use(express.json()); // ใส่ให้แน่ใจว่ารับ JSON ได้
   app.use(express.urlencoded({ extended: true })); // สำหรับ form-urlencoded (optional)
   app.use(cookieParser());
+
+  // ✅ เพิ่ม Static File Serving สำหรับรูปภาพ
+  app.use(
+    '/uploads',
+    express.static(join(__dirname, '..', 'public', 'uploads')),
+  );
+  app.use('/public', express.static(join(__dirname, '..', 'public')));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: false, // ตัด property ที่ไม่ได้อยู่ใน DTO ออก
