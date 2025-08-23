@@ -57,7 +57,7 @@ export class AuthController {
 
     const token = await this.authService.login(user);
 
-    const FIVE_MINUTES = 1000 * 60 * 60;
+    const ONE_HOUR = 1000 * 60 * 60; // ✅ เปลี่ยนจาก 5 นาที เป็น 1 ชั่วโมง
     const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
 
     let tokenName = 'admin_token';
@@ -66,7 +66,7 @@ export class AuthController {
     res.cookie(tokenName, token.accessToken, {
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: FIVE_MINUTES,
+      maxAge: ONE_HOUR,
       path: '/',
       secure: process.env.NODE_ENV === 'production',
       domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
@@ -98,7 +98,7 @@ export class AuthController {
     }
     const token = await this.authService.login(user);
 
-    const FIVE_MINUTES = 1000 * 60 * 60;
+    const ONE_HOUR = 1000 * 60 * 60; // ✅ เปลี่ยนจาก 5 นาที เป็น 1 ชั่วโมง
     const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7;
 
     let tokenName = 'member_token';
@@ -107,7 +107,7 @@ export class AuthController {
     res.cookie(tokenName, token.accessToken, {
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: FIVE_MINUTES,
+      maxAge: ONE_HOUR,
       path: '/',
       secure: process.env.NODE_ENV === 'production',
       domain: process.env.NODE_ENV === 'production' ? '.paodev.xyz' : undefined,
@@ -170,12 +170,12 @@ export class AuthController {
         },
       );
 
-      const FIVE_MINUTES = 1000 * 60 * 60;
+      const ONE_HOUR = 1000 * 60 * 60; // ✅ เปลี่ยนจาก 5 นาที เป็น 1 ชั่วโมง
 
       res.cookie(tokenCookieName, newAccessToken, {
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: FIVE_MINUTES,
+        maxAge: ONE_HOUR,
         secure: process.env.NODE_ENV === 'production',
       });
 
@@ -231,12 +231,12 @@ export class AuthController {
         },
       );
 
-      const FIVE_MINUTES = 1000 * 60 * 1; // 1 นาที
+      const ONE_MINUTE = 1000 * 60 * 1; // 1 นาที
 
       res.cookie(tokenCookieName, newAccessToken, {
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: FIVE_MINUTES,
+        maxAge: ONE_MINUTE,
         secure: process.env.NODE_ENV === 'production',
       });
 
