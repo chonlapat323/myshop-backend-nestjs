@@ -1,26 +1,26 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseInterceptors,
-  UploadedFiles,
   BadRequestException,
-  Query,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
   ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { SlidesService } from './slides.service';
-import { CreateSlideDto } from './dto/create-slide.dto';
-import { UpdateSlideDto } from './dto/update-slide.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { generateTempFilename } from 'utils/file.util';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { imageFileFilter } from 'utils';
+import { generateTempFilename } from 'utils/file.util';
+import { CreateSlideDto } from './dto/create-slide.dto';
+import { UpdateSlideDto } from './dto/update-slide.dto';
+import { SlidesService } from './slides.service';
 
 @Controller('slides')
 export class SlidesController {
@@ -99,8 +99,14 @@ export class SlidesController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete('/images/:id')
+  @Delete('remove-image/:id')
   async removeImage(@Param('id', ParseIntPipe) id: number) {
     return this.slidesService.removeImage(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('cleanup-temp')
+  async cleanupTempFiles() {
+    return this.slidesService.cleanupTempFiles();
   }
 }

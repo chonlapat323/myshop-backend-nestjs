@@ -170,4 +170,37 @@ export class SlidesService {
 
     return { message: 'Image removed successfully' };
   }
+
+  async cleanupTempFiles() {
+    const tempDir = path.join(process.cwd(), 'public', 'uploads', 'temp-uploads');
+    
+    try {
+      if (fs.existsSync(tempDir)) {
+        const files = fs.readdirSync(tempDir);
+        let deletedCount = 0;
+        
+        for (const file of files) {
+          const filePath = path.join(tempDir, file);
+          const stats = fs.statSync(filePath);
+          
+          // ลบไฟล์ที่เก่ากว่า 24 ชั่วโมง
+          const hoursOld = (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60);
+          if (hoursOld > 24) {
+            fs.unlinkSync(filePath);
+            deletedCount++;
+          }
+        }
+        
+        return { 
+          message: `Cleaned up ${deletedCount} temp files older than 24 hours`,
+          deletedCount 
+        };
+      }
+      
+      return { message: 'Temp directory not found' };
+    } catch (error) {
+      console.error('Error cleaning up temp files:', error);
+      throw new Error('Failed to cleanup temp files');
+    }
+  }
 }
